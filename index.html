@@ -1,399 +1,145 @@
 <!DOCTYPE html>
 <html lang="zh-CN">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>产品复购率分析看板</title>
-    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
-    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@400;500;700&display=swap" rel="stylesheet">
-    <style>
-        * { margin: 0; padding: 0; box-sizing: border-box; }
-        body {
-            font-family: 'Noto Sans SC', 'PingFang SC', 'Microsoft YaHei', sans-serif;
-            background: #F8FAFC;
-            color: #1A1A2E;
-            padding: 20px;
-        }
-        .tabs {
-            display: flex;
-            gap: 4px;
-            background: #e8e8e8;
-            padding: 4px;
-            border-radius: 10px;
-            width: fit-content;
-            margin: 0 auto 24px;
-        }
-        .tab {
-            padding: 10px 28px;
-            border-radius: 8px;
-            cursor: pointer;
-            font-weight: 500;
-            font-size: 15px;
-            transition: all 0.2s;
-            border: none;
-            background: transparent;
-            color: #666;
-        }
-        .tab.active { background: white; color: #2D5A8A; box-shadow: 0 2px 6px rgba(0,0,0,0.1); }
-        .tab:hover:not(.active) { background: #f0f0f0; }
-        .tab-content { display: none; }
-        .tab-content.active { display: block; }
-        .header { text-align: center; margin-bottom: 24px; }
-        .header h1 { font-size: 28px; font-weight: 700; color: #1A1A2E; }
-        .header p { color: #666; font-size: 14px; margin-top: 4px; }
-        .metrics { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; margin-bottom: 16px; }
-        .metric-card { background: white; border-radius: 12px; padding: 18px 16px; text-align: center; box-shadow: 0 2px 8px rgba(0,0,0,0.06); border-left: 4px solid; }
-        .metric-card.blue { border-color: #2D5A8A; }
-        .metric-card.orange { border-color: #F5A623; }
-        .metric-card.red { border-color: #E74C3C; }
-        .metric-card.green { border-color: #27AE60; }
-        .metric-card.purple { border-color: #9B59B6; }
-        .metric-card.teal { border-color: #1ABC9C; }
-        .metric-card.gray { border-color: #95A5A6; }
-        .metric-card.ks { border-color: #FF6B35; }
-        .metric-card.dy { border-color: #25F4EE; }
-        .metric-card.accent { border-color: #F5A623; }
-        .metric-value { font-size: 30px; font-weight: 700; }
-        .metric-label { font-size: 13px; color: #666; margin-top: 4px; }
-        .notice-box { background: #FFF3CD; border-radius: 8px; padding: 12px 16px; margin-bottom: 20px; font-size: 13px; color: #856404; border-left: 4px solid #FFC107; }
-        .notice-blue { background: #E8F4FD; color: #2D5A8A; border-left-color: #2D5A8A; }
-        .card { background: white; border-radius: 12px; padding: 20px; box-shadow: 0 2px 8px rgba(0,0,0,0.06); margin-bottom: 20px; }
-        .card-title { font-size: 16px; font-weight: 600; color: #333; margin-bottom: 16px; padding-bottom: 8px; border-bottom: 2px solid #f0f0f0; }
-        .chart-container { position: relative; height: 280px; }
-        .chart-container-sm { height: 220px; }
-        .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-bottom: 20px; }
-        .grid-3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; margin-bottom: 20px; }
-        .insight-card { background: white; border-radius: 12px; padding: 16px; box-shadow: 0 2px 8px rgba(0,0,0,0.06); }
-        .insight-header { display: flex; align-items: center; gap: 8px; font-weight: 600; color: #2D5A8A; margin-bottom: 8px; }
-        .insight-text { font-size: 13px; color: #555; line-height: 1.6; }
-        .table-container { max-height: 300px; overflow-y: auto; }
-        table { width: 100%; border-collapse: collapse; font-size: 13px; }
-        th, td { padding: 10px 8px; text-align: left; border-bottom: 1px solid #eee; }
-        th { background: #f8f9fa; font-weight: 600; color: #333; position: sticky; top: 0; }
-        .rate-high { color: #27AE60; font-weight: 600; }
-        .rate-mid { color: #F5A623; font-weight: 600; }
-        .rate-low { color: #E74C3C; font-weight: 600; }
-        .ks-color { color: #FF6B35; font-weight: 600; }
-        .dy-color { color: #1DA8B8; font-weight: 600; }
-        .platform-compare { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-bottom: 20px; }
-        .platform-card { background: white; border-radius: 12px; padding: 20px; box-shadow: 0 2px 8px rgba(0,0,0,0.06); }
-        .platform-card.ks { border-top: 4px solid #FF6B35; }
-        .platform-card.dy { border-top: 4px solid #25F4EE; }
-        .platform-header { display: flex; align-items: center; gap: 12px; margin-bottom: 16px; }
-        .platform-badge { padding: 6px 16px; border-radius: 20px; font-weight: 600; font-size: 14px; color: white; }
-        .ks-badge { background: #FF6B35; }
-        .dy-badge { background: #1DA8B8; }
-        .platform-rate { font-size: 32px; font-weight: 700; }
-        .platform-rate.ks { color: #FF6B35; }
-        .platform-rate.dy { color: #1DA8B8; }
-        .footer { text-align: center; color: #888; font-size: 12px; margin-top: 20px; padding-top: 16px; border-top: 1px solid #eee; }
-    </style>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>快手+抖音 复购率看板</title>
+<script src="https://cdn.plot.ly/plotly-2.35.2.min.js"></script>
+<style>
+* { margin:0; padding:0; box-sizing:border-box; }
+body { font-family:"PingFang SC","Microsoft YaHei","Noto Sans CJK SC",sans-serif; background:#0f1923; color:#e8eaed; }
+.header { background:linear-gradient(135deg,#1a2332,#16222a); padding:24px 40px; border-bottom:1px solid #2a3a4a; }
+.header h1 { font-size:22px; font-weight:700; color:#4ECDC4; letter-spacing:1px; }
+.header p { font-size:12px; color:#7f8c8d; margin-top:4px; }
+.kpi-row { display:grid; grid-template-columns:repeat(4,1fr); gap:16px; padding:24px 40px; }
+.kpi-card { background:#1e2a38; border-radius:12px; padding:20px 24px; border:1px solid #2a3a4a; }
+.kpi-card .label { font-size:11px; color:#7f8c8d; text-transform:uppercase; letter-spacing:1px; margin-bottom:8px; }
+.kpi-card .value { font-size:32px; font-weight:700; }
+.kpi-card .sub { font-size:11px; color:#7f8c8d; margin-top:4px; }
+.grid-2 { display:grid; grid-template-columns:1fr 1fr; gap:16px; padding:0 40px 24px; }
+.grid-1 { padding:0 40px 24px; }
+.chart-card { background:#1e2a38; border-radius:12px; padding:20px; border:1px solid #2a3a4a; }
+.chart-card h3 { font-size:13px; color:#bdc3c7; margin-bottom:16px; text-transform:uppercase; letter-spacing:1px; }
+.table-card { background:#1e2a38; border-radius:12px; padding:20px; border:1px solid #2a3a4a; max-height:420px; overflow-y:auto; }
+.table-card h3 { font-size:13px; color:#bdc3c7; margin-bottom:16px; text-transform:uppercase; letter-spacing:1px; }
+table { width:100%; border-collapse:collapse; font-size:12px; }
+th { background:#2c3e50; color:#4ECDC4; padding:8px 12px; text-align:left; font-weight:600; position:sticky; top:0; z-index:1; }
+td { padding:7px 12px; border-bottom:1px solid #2a3a4a; color:#bdc3c7; white-space:nowrap; }
+tr:hover td { background:#253040; }
+.badge { display:inline-block; padding:2px 8px; border-radius:10px; font-size:10px; font-weight:600; }
+.badge-red { background:#e74c3c33; color:#e74c3c; border:1px solid #e74c3c; }
+.badge-teal { background:#1abc9c33; color:#1abc9c; border:1px solid #1abc9c; }
+</style>
 </head>
 <body>
 
-<div class="tabs">
-    <button class="tab active" onclick="switchTab('overall')">📊 整体分析</button>
-    <button class="tab" onclick="switchTab('ksdy')">📱 快手 vs 抖音</button>
+<div class="header">
+  <h1>快手+抖音 复购率分析看板</h1>
+  <p>数据周期：2025年5月 &nbsp;|&nbsp; 平台：快手、抖音 &nbsp;|&nbsp; 商品数：214个 &nbsp;|&nbsp; 总销售额：¥158,889,992</p>
+</div>
+
+<div class="kpi-row">
+  <div class="kpi-card">
+    <div class="label">整体加权复购率</div>
+    <div class="value" style="color:#f1c40f">13.81%</div>
+    <div class="sub">快手+抖音合计</div>
+  </div>
+  <div class="kpi-card">
+    <div class="label">快手加权复购率</div>
+    <div class="value" style="color:#FF6B6B">20.51%</div>
+    <div class="sub">销售额 ¥13,730,659（占比8.6%）</div>
+  </div>
+  <div class="kpi-card">
+    <div class="label">抖音加权复购率</div>
+    <div class="value" style="color:#4ECDC4">13.18%</div>
+    <div class="sub">销售额 ¥145,157,333（占比91.4%）</div>
+  </div>
+  <div class="kpi-card">
+    <div class="label">低复购高销售额商品</div>
+    <div class="value" style="color:#e74c3c">28个</div>
+    <div class="sub">复购率&lt;10%且销售额&gt;5万，合计¥1.08亿</div>
+  </div>
+</div>
+
+<div class="grid-2">
+  <div class="chart-card"><h3>复购率分段 - 商品数量分布</h3><div id="chart1" style="height:300px"></div></div>
+  <div class="chart-card"><h3>复购率分段 - 销售额占比</h3><div id="chart2" style="height:300px"></div></div>
+</div>
+
+<div class="grid-2">
+  <div class="chart-card"><h3>快手 vs 抖音 对比</h3><div id="chart3" style="height:280px"></div></div>
+  <div class="chart-card"><h3>各复购率段 商品数 vs 销售额占比</h3><div id="chart4" style="height:280px"></div></div>
+</div>
+
+<div class="grid-1">
+  <div class="chart-card"><h3>商品散点图：销售额 vs 复购率（快手+抖音）</h3><div id="chart5" style="height:380px"></div></div>
+</div>
+
+<div class="grid-2">
+  <div class="chart-card"><h3>高复购率商品 Top15（加权复购率≥20%）</h3><div id="chart6" style="height:400px"></div></div>
+  <div class="chart-card"><h3>低复购高销售额商品 Top20（急需私域运营）</h3><div id="chart7" style="height:400px"></div></div>
+</div>
+
+<div class="grid-2">
+  <div class="table-card">
+    <h3>高复购率商品明细（加权复购率≥20%）</h3>
+    <table>
+      <thead><tr><th>#</th><th>商品名称</th><th>加权复购率</th><th>总销售额</th><th>快手复购率</th><th>抖音复购率</th></tr></thead>
+      <tbody><tr><td>1</td><td>245轻上椰子水</td><td><span class='badge badge-teal'>28.4%</span></td><td>¥7,307,580</td><td>29.1%</td><td>28.3%</td></tr>
+<tr><td>2</td><td>220轻滋畅西梅多多发酵酸奶</td><td><span class='badge badge-teal'>34.1%</span></td><td>¥2,779,704</td><td>20.3%</td><td>35.0%</td></tr>
+<tr><td>3</td><td>60轻滋畅西梅饮</td><td><span class='badge badge-teal'>23.3%</span></td><td>¥2,677,692</td><td>33.3%</td><td>22.2%</td></tr>
+<tr><td>4</td><td>220轻上原味0糖生椰</td><td><span class='badge badge-teal'>32.8%</span></td><td>¥2,381,154</td><td>37.1%</td><td>32.3%</td></tr>
+<tr><td>5</td><td>245轻上100%苹果汁</td><td><span class='badge badge-teal'>32.0%</span></td><td>¥2,041,685</td><td>27.4%</td><td>33.1%</td></tr>
+<tr><td>6</td><td>60纤冠军白芸豆益生元高纤饮</td><td><span class='badge badge-teal'>21.7%</span></td><td>¥880,524</td><td>7.6%</td><td>22.1%</td></tr>
+<tr><td>7</td><td>245轻上白桦树汁</td><td><span class='badge badge-teal'>32.0%</span></td><td>¥550,159</td><td>19.3%</td><td>34.9%</td></tr>
+<tr><td>8</td><td>235轻上桦树白桦树汁水飞蓟肝肽饮</td><td><span class='badge badge-teal'>21.2%</span></td><td>¥325,113</td><td>4.9%</td><td>21.5%</td></tr>
+<tr><td>9</td><td>245自律零西梅黑咖</td><td><span class='badge badge-teal'>20.9%</span></td><td>¥324,041</td><td>15.2%</td><td>21.0%</td></tr>
+<tr><td>10</td><td>150轻快活100%橙汁</td><td><span class='badge badge-teal'>36.8%</span></td><td>¥265,233</td><td>14.5%</td><td>39.7%</td></tr>
+<tr><td>11</td><td>245轻上纤冠军奇亚籽纤维饮</td><td><span class='badge badge-teal'>22.2%</span></td><td>¥244,912</td><td>21.9%</td><td>22.4%</td></tr>
+<tr><td>12</td><td>245轻滋畅西梅乌龙茶</td><td><span class='badge badge-teal'>38.3%</span></td><td>¥239,240</td><td>17.5%</td><td>38.3%</td></tr>
+<tr><td>13</td><td>1L轻上原味0糖生椰</td><td><span class='badge badge-teal'>51.1%</span></td><td>¥162,661</td><td>41.1%</td><td>51.4%</td></tr>
+<tr><td>14</td><td>1L轻上100%苹果汁</td><td><span class='badge badge-teal'>35.5%</span></td><td>¥161,432</td><td>33.1%</td><td>35.5%</td></tr>
+<tr><td>15</td><td>1L轻上100%葡萄汁</td><td><span class='badge badge-teal'>35.7%</span></td><td>¥142,786</td><td>25.2%</td><td>35.8%</td></tr>
+</tbody>
+    </table>
+  </div>
+  <div class="table-card">
+    <h3>低复购高销售额商品（复购率&lt;10%且销售额&gt;5万）</h3>
+    <table>
+      <thead><tr><th>#</th><th>商品名称</th><th>加权复购率</th><th>总销售额</th><th>快手复购率</th><th>抖音复购率</th></tr></thead>
+      <tbody><tr><td>1</td><td>235纤冠军芭乐油柑汁</td><td><span class='badge badge-red'>5.3%</span></td><td>¥6,678,311</td><td>6.0%</td><td>5.3%</td></tr>
+<tr><td>2</td><td>220简零控牛油果奶昔</td><td><span class='badge badge-red'>8.3%</span></td><td>¥5,132,907</td><td>14.0%</td><td>8.1%</td></tr>
+<tr><td>3</td><td>245小轻甘金银花凉茶</td><td><span class='badge badge-red'>8.9%</span></td><td>¥4,715,499</td><td>14.4%</td><td>7.9%</td></tr>
+<tr><td>4</td><td>235纤冠军羽衣甘蓝百香果西柚汁</td><td><span class='badge badge-red'>5.9%</span></td><td>¥3,507,810</td><td>0.0%</td><td>5.9%</td></tr>
+<tr><td>5</td><td>950自律零VB羽衣甘蓝芭乐柠檬水</td><td><span class='badge badge-red'>4.9%</span></td><td>¥3,502,706</td><td>2.0%</td><td>5.1%</td></tr>
+<tr><td>6</td><td>138轻上牛牛核桃小奶</td><td><span class='badge badge-red'>7.3%</span></td><td>¥2,792,567</td><td>10.3%</td><td>7.0%</td></tr>
+<tr><td>7</td><td>245小轻甘竹蔗茅根水</td><td><span class='badge badge-red'>9.7%</span></td><td>¥1,756,100</td><td>19.5%</td><td>8.8%</td></tr>
+<tr><td>8</td><td>150轻上牛牛山楂七星茶</td><td><span class='badge badge-red'>6.1%</span></td><td>¥1,279,156</td><td>9.0%</td><td>5.9%</td></tr>
+<tr><td>9</td><td>245东方补者乌梅熬山楂</td><td><span class='badge badge-red'>7.2%</span></td><td>¥1,057,301</td><td>10.1%</td><td>7.1%</td></tr>
+<tr><td>10</td><td>220自律零白芸豆生椰丝绒</td><td><span class='badge badge-red'>9.5%</span></td><td>¥823,122</td><td>0.0%</td><td>9.5%</td></tr>
+<tr><td>11</td><td>220简零控百香果西柚奇亚籽果昔</td><td><span class='badge badge-red'>6.9%</span></td><td>¥763,989</td><td>6.3%</td><td>7.0%</td></tr>
+<tr><td>12</td><td>220东方补者桑葚五黑酸奶</td><td><span class='badge badge-red'>6.7%</span></td><td>¥701,137</td><td>6.8%</td><td>6.7%</td></tr>
+<tr><td>13</td><td>220简零控羽衣甘蓝青苹果奶昔</td><td><span class='badge badge-red'>9.6%</span></td><td>¥575,472</td><td>11.6%</td><td>9.6%</td></tr>
+<tr><td>14</td><td>150轻上牛牛猴多C猕猴桃汁</td><td><span class='badge badge-red'>5.2%</span></td><td>¥572,675</td><td>1.7%</td><td>5.2%</td></tr>
+<tr><td>15</td><td>150轻上牛牛叶黄素酯蓝莓小葡萄汁</td><td><span class='badge badge-red'>3.1%</span></td><td>¥528,629</td><td>1.5%</td><td>3.1%</td></tr>
+<tr><td>16</td><td>500轻上轻颜VC1000柠檬水</td><td><span class='badge badge-red'>1.0%</span></td><td>¥512,771</td><td>0.8%</td><td>1.0%</td></tr>
+<tr><td>17</td><td>950轻上凤梨白茶果汁茶</td><td><span class='badge badge-red'>9.2%</span></td><td>¥429,944</td><td>10.5%</td><td>8.9%</td></tr>
+<tr><td>18</td><td>150轻上牛牛钙铁锌多莓好</td><td><span class='badge badge-red'>6.4%</span></td><td>¥417,254</td><td>4.2%</td><td>6.5%</td></tr>
+<tr><td>19</td><td>950轻上苹果大红袍果汁茶</td><td><span class='badge badge-red'>7.6%</span></td><td>¥377,382</td><td>8.9%</td><td>7.3%</td></tr>
+<tr><td>20</td><td>220简零控牛油果羽衣甘蓝奇亚籽果昔</td><td><span class='badge badge-red'>2.3%</span></td><td>¥336,245</td><td>3.8%</td><td>1.4%</td></tr>
+</tbody>
+    </table>
+  </div>
 </div>
 
 <script>
-function switchTab(tab) {
-    document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
-    document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
-    if (tab === 'overall') {
-        document.querySelector('.tab:first-child').classList.add('active');
-        document.getElementById('tab-overall').classList.add('active');
-    } else {
-        document.querySelector('.tab:last-child').classList.add('active');
-        document.getElementById('tab-ksdy').classList.add('active');
-    }
-}
+Plotly.newPlot('chart1', {"data":[{"marker":{"color":["#e74c3c","#e67e22","#f1c40f","#2ecc71","#27ae60"]},"text":["78","60","18","19","5"],"textfont":{"color":"#e8eaed"},"textposition":"outside","x":["0-10%","10-20%","20-30%","30-50%","50%+"],"y":[78,60,18,19,5],"type":"bar"}],"layout":{"template":{"data":{"histogram2dcontour":[{"type":"histogram2dcontour","colorbar":{"outlinewidth":0,"ticks":""},"colorscale":[[0.0,"#0d0887"],[0.1111111111111111,"#46039f"],[0.2222222222222222,"#7201a8"],[0.3333333333333333,"#9c179e"],[0.4444444444444444,"#bd3786"],[0.5555555555555556,"#d8576b"],[0.6666666666666666,"#ed7953"],[0.7777777777777778,"#fb9f3a"],[0.8888888888888888,"#fdca26"],[1.0,"#f0f921"]]}],"choropleth":[{"type":"choropleth","colorbar":{"outlinewidth":0,"ticks":""}}],"histogram2d":[{"type":"histogram2d","colorbar":{"outlinewidth":0,"ticks":""},"colorscale":[[0.0,"#0d0887"],[0.1111111111111111,"#46039f"],[0.2222222222222222,"#7201a8"],[0.3333333333333333,"#9c179e"],[0.4444444444444444,"#bd3786"],[0.5555555555555556,"#d8576b"],[0.6666666666666666,"#ed7953"],[0.7777777777777778,"#fb9f3a"],[0.8888888888888888,"#fdca26"],[1.0,"#f0f921"]]}],"heatmap":[{"type":"heatmap","colorbar":{"outlinewidth":0,"ticks":""},"colorscale":[[0.0,"#0d0887"],[0.1111111111111111,"#46039f"],[0.2222222222222222,"#7201a8"],[0.3333333333333333,"#9c179e"],[0.4444444444444444,"#bd3786"],[0.5555555555555556,"#d8576b"],[0.6666666666666666,"#ed7953"],[0.7777777777777778,"#fb9f3a"],[0.8888888888888888,"#fdca26"],[1.0,"#f0f921"]]}],"contourcarpet":[{"type":"contourcarpet","colorbar":{"outlinewidth":0,"ticks":""}}],"contour":[{"type":"contour","colorbar":{"outlinewidth":0,"ticks":""},"colorscale":[[0.0,"#0d0887"],[0.1111111111111111,"#46039f"],[0.2222222222222222,"#7201a8"],[0.3333333333333333,"#9c179e"],[0.4444444444444444,"#bd3786"],[0.5555555555555556,"#d8576b"],[0.6666666666666666,"#ed7953"],[0.7777777777777778,"#fb9f3a"],[0.8888888888888888,"#fdca26"],[1.0,"#f0f921"]]}],"surface":[{"type":"surface","colorbar":{"outlinewidth":0,"ticks":""},"colorscale":[[0.0,"#0d0887"],[0.1111111111111111,"#46039f"],[0.2222222222222222,"#7201a8"],[0.3333333333333333,"#9c179e"],[0.4444444444444444,"#bd3786"],[0.5555555555555556,"#d8576b"],[0.6666666666666666,"#ed7953"],[0.7777777777777778,"#fb9f3a"],[0.8888888888888888,"#fdca26"],[1.0,"#f0f921"]]}],"mesh3d":[{"type":"mesh3d","colorbar":{"outlinewidth":0,"ticks":""}}],"scatter":[{"fillpattern":{"fillmode":"overlay","size":10,"solidity":0.2},"type":"scatter"}],"parcoords":[{"type":"parcoords","line":{"colorbar":{"outlinewidth":0,"ticks":""}}}],"scatterpolargl":[{"type":"scatterpolargl","marker":{"colorbar":{"outlinewidth":0,"ticks":""}}}],"bar":[{"error_x":{"color":"#2a3f5f"},"error_y":{"color":"#2a3f5f"},"marker":{"line":{"color":"#E5ECF6","width":0.5},"pattern":{"fillmode":"overlay","size":10,"solidity":0.2}},"type":"bar"}],"scattergeo":[{"type":"scattergeo","marker":{"colorbar":{"outlinewidth":0,"ticks":""}}}],"scatterpolar":[{"type":"scatterpolar","marker":{"colorbar":{"outlinewidth":0,"ticks":""}}}],"histogram":[{"marker":{"pattern":{"fillmode":"overlay","size":10,"solidity":0.2}},"type":"histogram"}],"scattergl":[{"type":"scattergl","marker":{"colorbar":{"outlinewidth":0,"ticks":""}}}],"scatter3d":[{"type":"scatter3d","line":{"colorbar":{"outlinewidth":0,"ticks":""}},"marker":{"colorbar":{"outlinewidth":0,"ticks":""}}}],"scattermap":[{"type":"scattermap","marker":{"colorbar":{"outlinewidth":0,"ticks":""}}}],"scattermapbox":[{"type":"scattermapbox","marker":{"colorbar":{"outlinewidth":0,"ticks":""}}}],"scatterternary":[{"type":"scatterternary","marker":{"colorbar":{"outlinewidth":0,"ticks":""}}}],"scattercarpet":[{"type":"scattercarpet","marker":{"colorbar":{"outlinewidth":0,"ticks":""}}}],"carpet":[{"aaxis":{"endlinecolor":"#2a3f5f","gridcolor":"white","linecolor":"white","minorgridcolor":"white","startlinecolor":"#2a3f5f"},"baxis":{"endlinecolor":"#2a3f5f","gridcolor":"white","linecolor":"white","minorgridcolor":"white","startlinecolor":"#2a3f5f"},"type":"carpet"}],"table":[{"cells":{"fill":{"color":"#EBF0F8"},"line":{"color":"white"}},"header":{"fill":{"color":"#C8D4E3"},"line":{"color":"white"}},"type":"table"}],"barpolar":[{"marker":{"line":{"color":"#E5ECF6","width":0.5},"pattern":{"fillmode":"overlay","size":10,"solidity":0.2}},"type":"barpolar"}],"pie":[{"automargin":true,"type":"pie"}]},"layout":{"autotypenumbers":"strict","colorway":["#636efa","#EF553B","#00cc96","#ab63fa","#FFA15A","#19d3f3","#FF6692","#B6E880","#FF97FF","#FECB52"],"font":{"color":"#2a3f5f"},"hovermode":"closest","hoverlabel":{"align":"left"},"paper_bgcolor":"white","plot_bgcolor":"#E5ECF6","polar":{"bgcolor":"#E5ECF6","angularaxis":{"gridcolor":"white","linecolor":"white","ticks":""},"radialaxis":{"gridcolor":"white","linecolor":"white","ticks":""}},"ternary":{"bgcolor":"#E5ECF6","aaxis":{"gridcolor":"white","linecolor":"white","ticks":""},"baxis":{"gridcolor":"white","linecolor":"white","ticks":""},"caxis":{"gridcolor":"white","linecolor":"white","ticks":""}},"coloraxis":{"colorbar":{"outlinewidth":0,"ticks":""}},"colorscale":{"sequential":[[0.0,"#0d0887"],[0.1111111111111111,"#46039f"],[0.2222222222222222,"#7201a8"],[0.3333333333333333,"#9c179e"],[0.4444444444444444,"#bd3786"],[0.5555555555555556,"#d8576b"],[0.6666666666666666,"#ed7953"],[0.7777777777777778,"#fb9f3a"],[0.8888888888888888,"#fdca26"],[1.0,"#f0f921"]],"sequentialminus":[[0.0,"#0d0887"],[0.1111111111111111,"#46039f"],[0.2222222222222222,"#7201a8"],[0.3333333333333333,"#9c179e"],[0.4444444444444444,"#bd3786"],[0.5555555555555556,"#d8576b"],[0.6666666666666666,"#ed7953"],[0.7777777777777778,"#fb9f3a"],[0.8888888888888888,"#fdca26"],[1.0,"#f0f921"]],"diverging":[[0,"#8e0152"],[0.1,"#c51b7d"],[0.2,"#de77ae"],[0.3,"#f1b6da"],[0.4,"#fde0ef"],[0.5,"#f7f7f7"],[0.6,"#e6f5d0"],[0.7,"#b8e186"],[0.8,"#7fbc41"],[0.9,"#4d9221"],[1,"#276419"]]},"xaxis":{"gridcolor":"white","linecolor":"white","ticks":"","title":{"standoff":15},"zerolinecolor":"white","automargin":true,"zerolinewidth":2},"yaxis":{"gridcolor":"white","linecolor":"white","ticks":"","title":{"standoff":15},"zerolinecolor":"white","automargin":true,"zerolinewidth":2},"scene":{"xaxis":{"backgroundcolor":"#E5ECF6","gridcolor":"white","linecolor":"white","showbackground":true,"ticks":"","zerolinecolor":"white","gridwidth":2},"yaxis":{"backgroundcolor":"#E5ECF6","gridcolor":"white","linecolor":"white","showbackground":true,"ticks":"","zerolinecolor":"white","gridwidth":2},"zaxis":{"backgroundcolor":"#E5ECF6","gridcolor":"white","linecolor":"white","showbackground":true,"ticks":"","zerolinecolor":"white","gridwidth":2}},"shapedefaults":{"line":{"color":"#2a3f5f"}},"annotationdefaults":{"arrowcolor":"#2a3f5f","arrowhead":0,"arrowwidth":1},"geo":{"bgcolor":"white","landcolor":"#E5ECF6","subunitcolor":"white","showland":true,"showlakes":true,"lakecolor":"white"},"title":{"x":0.05},"mapbox":{"style":"light"}}},"font":{"color":"#bdc3c7"},"margin":{"t":10,"b":40,"l":10,"r":10},"xaxis":{"title":{"text":""},"color":"#7f8c8d"},"yaxis":{"title":{"text":"Product Count"},"color":"#7f8c8d","gridcolor":"#2a3a4a"},"paper_bgcolor":"rgba(0,0,0,0)","plot_bgcolor":"rgba(0,0,0,0)"}});
+Plotly.newPlot('chart2', {"data":[{"hovertemplate":"%{label}\u003cbr\u003e¥%{value:,.0f}\u003cbr\u003e%{percent}\u003cextra\u003e\u003c\u002fextra\u003e","labels":["0-10%","10-20%","20-30%","30-50%","50%+"],"marker":{"colors":["#e74c3c","#e67e22","#f1c40f","#2ecc71","#27ae60"]},"textfont":{"color":"#e8eaed"},"textinfo":"label+percent","values":[38293439,98976868,12313866,9041207,175263],"type":"pie"}],"layout":{"template":{"data":{"histogram2dcontour":[{"type":"histogram2dcontour","colorbar":{"outlinewidth":0,"ticks":""},"colorscale":[[0.0,"#0d0887"],[0.1111111111111111,"#46039f"],[0.2222222222222222,"#7201a8"],[0.3333333333333333,"#9c179e"],[0.4444444444444444,"#bd3786"],[0.5555555555555556,"#d8576b"],[0.6666666666666666,"#ed7953"],[0.7777777777777778,"#fb9f3a"],[0.8888888888888888,"#fdca26"],[1.0,"#f0f921"]]}],"choropleth":[{"type":"choropleth","colorbar":{"outlinewidth":0,"ticks":""}}],"histogram2d":[{"type":"histogram2d","colorbar":{"outlinewidth":0,"ticks":""},"colorscale":[[0.0,"#0d0887"],[0.1111111111111111,"#46039f"],[0.2222222222222222,"#7201a8"],[0.3333333333333333,"#9c179e"],[0.4444444444444444,"#bd3786"],[0.5555555555555556,"#d8576b"],[0.6666666666666666,"#ed7953"],[0.7777777777777778,"#fb9f3a"],[0.8888888888888888,"#fdca26"],[1.0,"#f0f921"]]}],"heatmap":[{"type":"heatmap","colorbar":{"outlinewidth":0,"ticks":""},"colorscale":[[0.0,"#0d0887"],[0.1111111111111111,"#46039f"],[0.2222222222222222,"#7201a8"],[0.3333333333333333,"#9c179e"],[0.4444444444444444,"#bd3786"],[0.5555555555555556,"#d8576b"],[0.6666666666666666,"#ed7953"],[0.7777777777777778,"#fb9f3a"],[0.8888888888888888,"#fdca26"],[1.0,"#f0f921"]]}],"contourcarpet":[{"type":"contourcarpet","colorbar":{"outlinewidth":0,"ticks":""}}],"contour":[{"type":"contour","colorbar":{"outlinewidth":0,"ticks":""},"colorscale":[[0.0,"#0d0887"],[0.1111111111111111,"#46039f"],[0.2222222222222222,"#7201a8"],[0.3333333333333333,"#9c179e"],[0.4444444444444444,"#bd3786"],[0.5555555555555556,"#d8576b"],[0.6666666666666666,"#ed7953"],[0.7777777777777778,"#fb9f3a"],[0.8888888888888888,"#fdca26"],[1.0,"#f0f921"]]}],"surface":[{"type":"surface","colorbar":{"outlinewidth":0,"ticks":""},"colorscale":[[0.0,"#0d0887"],[0.1111111111111111,"#46039f"],[0.2222222222222222,"#7201a8"],[0.3333333333333333,"#9c179e"],[0.4444444444444444,"#bd3786"],[0.5555555555555556,"#d8576b"],[0.6666666666666666,"#ed7953"],[0.7777777777777778,"#fb9f3a"],[0.8888888888888888,"#fdca26"],[1.0,"#f0f921"]]}],"mesh3d":[{"type":"mesh3d","colorbar":{"outlinewidth":0,"ticks":""}}],"scatter":[{"fillpattern":{"fillmode":"overlay","size":10,"solidity":0.2},"type":"scatter"}],"parcoords":[{"type":"parcoords","line":{"colorbar":{"outlinewidth":0,"ticks":""}}}],"scatterpolargl":[{"type":"scatterpolargl","marker":{"colorbar":{"outlinewidth":0,"ticks":""}}}],"bar":[{"error_x":{"color":"#2a3f5f"},"error_y":{"color":"#2a3f5f"},"marker":{"line":{"color":"#E5ECF6","width":0.5},"pattern":{"fillmode":"overlay","size":10,"solidity":0.2}},"type":"bar"}],"scattergeo":[{"type":"scattergeo","marker":{"colorbar":{"outlinewidth":0,"ticks":""}}}],"scatterpolar":[{"type":"scatterpolar","marker":{"colorbar":{"outlinewidth":0,"ticks":""}}}],"histogram":[{"marker":{"pattern":{"fillmode":"overlay","size":10,"solidity":0.2}},"type":"histogram"}],"scattergl":[{"type":"scattergl","marker":{"colorbar":{"outlinewidth":0,"ticks":""}}}],"scatter3d":[{"type":"scatter3d","line":{"colorbar":{"outlinewidth":0,"ticks":""}},"marker":{"colorbar":{"outlinewidth":0,"ticks":""}}}],"scattermap":[{"type":"scattermap","marker":{"colorbar":{"outlinewidth":0,"ticks":""}}}],"scattermapbox":[{"type":"scattermapbox","marker":{"colorbar":{"outlinewidth":0,"ticks":""}}}],"scatterternary":[{"type":"scatterternary","marker":{"colorbar":{"outlinewidth":0,"ticks":""}}}],"scattercarpet":[{"type":"scattercarpet","marker":{"colorbar":{"outlinewidth":0,"ticks":""}}}],"carpet":[{"aaxis":{"endlinecolor":"#2a3f5f","gridcolor":"white","linecolor":"white","minorgridcolor":"white","startlinecolor":"#2a3f5f"},"baxis":{"endlinecolor":"#2a3f5f","gridcolor":"white","linecolor":"white","minorgridcolor":"white","startlinecolor":"#2a3f5f"},"type":"carpet"}],"table":[{"cells":{"fill":{"color":"#EBF0F8"},"line":{"color":"white"}},"header":{"fill":{"color":"#C8D4E3"},"line":{"color":"white"}},"type":"table"}],"barpolar":[{"marker":{"line":{"color":"#E5ECF6","width":0.5},"pattern":{"fillmode":"overlay","size":10,"solidity":0.2}},"type":"barpolar"}],"pie":[{"automargin":true,"type":"pie"}]},"layout":{"autotypenumbers":"strict","colorway":["#636efa","#EF553B","#00cc96","#ab63fa","#FFA15A","#19d3f3","#FF6692","#B6E880","#FF97FF","#FECB52"],"font":{"color":"#2a3f5f"},"hovermode":"closest","hoverlabel":{"align":"left"},"paper_bgcolor":"white","plot_bgcolor":"#E5ECF6","polar":{"bgcolor":"#E5ECF6","angularaxis":{"gridcolor":"white","linecolor":"white","ticks":""},"radialaxis":{"gridcolor":"white","linecolor":"white","ticks":""}},"ternary":{"bgcolor":"#E5ECF6","aaxis":{"gridcolor":"white","linecolor":"white","ticks":""},"baxis":{"gridcolor":"white","linecolor":"white","ticks":""},"caxis":{"gridcolor":"white","linecolor":"white","ticks":""}},"coloraxis":{"colorbar":{"outlinewidth":0,"ticks":""}},"colorscale":{"sequential":[[0.0,"#0d0887"],[0.1111111111111111,"#46039f"],[0.2222222222222222,"#7201a8"],[0.3333333333333333,"#9c179e"],[0.4444444444444444,"#bd3786"],[0.5555555555555556,"#d8576b"],[0.6666666666666666,"#ed7953"],[0.7777777777777778,"#fb9f3a"],[0.8888888888888888,"#fdca26"],[1.0,"#f0f921"]],"sequentialminus":[[0.0,"#0d0887"],[0.1111111111111111,"#46039f"],[0.2222222222222222,"#7201a8"],[0.3333333333333333,"#9c179e"],[0.4444444444444444,"#bd3786"],[0.5555555555555556,"#d8576b"],[0.6666666666666666,"#ed7953"],[0.7777777777777778,"#fb9f3a"],[0.8888888888888888,"#fdca26"],[1.0,"#f0f921"]],"diverging":[[0,"#8e0152"],[0.1,"#c51b7d"],[0.2,"#de77ae"],[0.3,"#f1b6da"],[0.4,"#fde0ef"],[0.5,"#f7f7f7"],[0.6,"#e6f5d0"],[0.7,"#b8e186"],[0.8,"#7fbc41"],[0.9,"#4d9221"],[1,"#276419"]]},"xaxis":{"gridcolor":"white","linecolor":"white","ticks":"","title":{"standoff":15},"zerolinecolor":"white","automargin":true,"zerolinewidth":2},"yaxis":{"gridcolor":"white","linecolor":"white","ticks":"","title":{"standoff":15},"zerolinecolor":"white","automargin":true,"zerolinewidth":2},"scene":{"xaxis":{"backgroundcolor":"#E5ECF6","gridcolor":"white","linecolor":"white","showbackground":true,"ticks":"","zerolinecolor":"white","gridwidth":2},"yaxis":{"backgroundcolor":"#E5ECF6","gridcolor":"white","linecolor":"white","showbackground":true,"ticks":"","zerolinecolor":"white","gridwidth":2},"zaxis":{"backgroundcolor":"#E5ECF6","gridcolor":"white","linecolor":"white","showbackground":true,"ticks":"","zerolinecolor":"white","gridwidth":2}},"shapedefaults":{"line":{"color":"#2a3f5f"}},"annotationdefaults":{"arrowcolor":"#2a3f5f","arrowhead":0,"arrowwidth":1},"geo":{"bgcolor":"white","landcolor":"#E5ECF6","subunitcolor":"white","showland":true,"showlakes":true,"lakecolor":"white"},"title":{"x":0.05},"mapbox":{"style":"light"}}},"font":{"color":"#bdc3c7"},"margin":{"t":10,"b":10,"l":10,"r":10},"paper_bgcolor":"rgba(0,0,0,0)","plot_bgcolor":"rgba(0,0,0,0)","showlegend":false}});
+Plotly.newPlot('chart3', {"data":[{"marker":{"color":["#FF6B6B","#4ECDC4"]},"text":["13.7M","145.2M"],"textfont":{"color":"#e8eaed"},"textposition":"outside","x":["Kuashou","Douyin"],"y":[13.73,145.16],"type":"bar","xaxis":"x","yaxis":"y"},{"marker":{"color":["#FF6B6B","#4ECDC4"]},"text":["20.5%","13.2%"],"textfont":{"color":"#e8eaed"},"textposition":"outside","x":["Kuashou","Douyin"],"y":[20.51,13.18],"type":"bar","xaxis":"x2","yaxis":"y2"}],"layout":{"template":{"data":{"histogram2dcontour":[{"type":"histogram2dcontour","colorbar":{"outlinewidth":0,"ticks":""},"colorscale":[[0.0,"#0d0887"],[0.1111111111111111,"#46039f"],[0.2222222222222222,"#7201a8"],[0.3333333333333333,"#9c179e"],[0.4444444444444444,"#bd3786"],[0.5555555555555556,"#d8576b"],[0.6666666666666666,"#ed7953"],[0.7777777777777778,"#fb9f3a"],[0.8888888888888888,"#fdca26"],[1.0,"#f0f921"]]}],"choropleth":[{"type":"choropleth","colorbar":{"outlinewidth":0,"ticks":""}}],"histogram2d":[{"type":"histogram2d","colorbar":{"outlinewidth":0,"ticks":""},"colorscale":[[0.0,"#0d0887"],[0.1111111111111111,"#46039f"],[0.2222222222222222,"#7201a8"],[0.3333333333333333,"#9c179e"],[0.4444444444444444,"#bd3786"],[0.5555555555555556,"#d8576b"],[0.6666666666666666,"#ed7953"],[0.7777777777777778,"#fb9f3a"],[0.8888888888888888,"#fdca26"],[1.0,"#f0f921"]]}],"heatmap":[{"type":"heatmap","colorbar":{"outlinewidth":0,"ticks":""},"colorscale":[[0.0,"#0d0887"],[0.1111111111111111,"#46039f"],[0.2222222222222222,"#7201a8"],[0.3333333333333333,"#9c179e"],[0.4444444444444444,"#bd3786"],[0.5555555555555556,"#d8576b"],[0.6666666666666666,"#ed7953"],[0.7777777777777778,"#fb9f3a"],[0.8888888888888888,"#fdca26"],[1.0,"#f0f921"]]}],"contourcarpet":[{"type":"contourcarpet","colorbar":{"outlinewidth":0,"ticks":""}}],"contour":[{"type":"contour","colorbar":{"outlinewidth":0,"ticks":""},"colorscale":[[0.0,"#0d0887"],[0.1111111111111111,"#46039f"],[0.2222222222222222,"#7201a8"],[0.3333333333333333,"#9c179e"],[0.4444444444444444,"#bd3786"],[0.5555555555555556,"#d8576b"],[0.6666666666666666,"#ed7953"],[0.7777777777777778,"#fb9f3a"],[0.8888888888888888,"#fdca26"],[1.0,"#f0f921"]]}],"surface":[{"type":"surface","colorbar":{"outlinewidth":0,"ticks":""},"colorscale":[[0.0,"#0d0887"],[0.1111111111111111,"#46039f"],[0.2222222222222222,"#7201a8"],[0.3333333333333333,"#9c179e"],[0.4444444444444444,"#bd3786"],[0.5555555555555556,"#d8576b"],[0.6666666666666666,"#ed7953"],[0.7777777777777778,"#fb9f3a"],[0.8888888888888888,"#fdca26"],[1.0,"#f0f921"]]}],"mesh3d":[{"type":"mesh3d","colorbar":{"outlinewidth":0,"ticks":""}}],"scatter":[{"fillpattern":{"fillmode":"overlay","size":10,"solidity":0.2},"type":"scatter"}],"parcoords":[{"type":"parcoords","line":{"colorbar":{"outlinewidth":0,"ticks":""}}}],"scatterpolargl":[{"type":"scatterpolargl","marker":{"colorbar":{"outlinewidth":0,"ticks":""}}}],"bar":[{"error_x":{"color":"#2a3f5f"},"error_y":{"color":"#2a3f5f"},"marker":{"line":{"color":"#E5ECF6","width":0.5},"pattern":{"fillmode":"overlay","size":10,"solidity":0.2}},"type":"bar"}],"scattergeo":[{"type":"scattergeo","marker":{"colorbar":{"outlinewidth":0,"ticks":""}}}],"scatterpolar":[{"type":"scatterpolar","marker":{"colorbar":{"outlinewidth":0,"ticks":""}}}],"histogram":[{"marker":{"pattern":{"fillmode":"overlay","size":10,"solidity":0.2}},"type":"histogram"}],"scattergl":[{"type":"scattergl","marker":{"colorbar":{"outlinewidth":0,"ticks":""}}}],"scatter3d":[{"type":"scatter3d","line":{"colorbar":{"outlinewidth":0,"ticks":""}},"marker":{"colorbar":{"outlinewidth":0,"ticks":""}}}],"scattermap":[{"type":"scattermap","marker":{"colorbar":{"outlinewidth":0,"ticks":""}}}],"scattermapbox":[{"type":"scattermapbox","marker":{"colorbar":{"outlinewidth":0,"ticks":""}}}],"scatterternary":[{"type":"scatterternary","marker":{"colorbar":{"outlinewidth":0,"ticks":""}}}],"scattercarpet":[{"type":"scattercarpet","marker":{"colorbar":{"outlinewidth":0,"ticks":""}}}],"carpet":[{"aaxis":{"endlinecolor":"#2a3f5f","gridcolor":"white","linecolor":"white","minorgridcolor":"white","startlinecolor":"#2a3f5f"},"baxis":{"endlinecolor":"#2a3f5f","gridcolor":"white","linecolor":"white","minorgridcolor":"white","startlinecolor":"#2a3f5f"},"type":"carpet"}],"table":[{"cells":{"fill":{"color":"#EBF0F8"},"line":{"color":"white"}},"header":{"fill":{"color":"#C8D4E3"},"line":{"color":"white"}},"type":"table"}],"barpolar":[{"marker":{"line":{"color":"#E5ECF6","width":0.5},"pattern":{"fillmode":"overlay","size":10,"solidity":0.2}},"type":"barpolar"}],"pie":[{"automargin":true,"type":"pie"}]},"layout":{"autotypenumbers":"strict","colorway":["#636efa","#EF553B","#00cc96","#ab63fa","#FFA15A","#19d3f3","#FF6692","#B6E880","#FF97FF","#FECB52"],"font":{"color":"#2a3f5f"},"hovermode":"closest","hoverlabel":{"align":"left"},"paper_bgcolor":"white","plot_bgcolor":"#E5ECF6","polar":{"bgcolor":"#E5ECF6","angularaxis":{"gridcolor":"white","linecolor":"white","ticks":""},"radialaxis":{"gridcolor":"white","linecolor":"white","ticks":""}},"ternary":{"bgcolor":"#E5ECF6","aaxis":{"gridcolor":"white","linecolor":"white","ticks":""},"baxis":{"gridcolor":"white","linecolor":"white","ticks":""},"caxis":{"gridcolor":"white","linecolor":"white","ticks":""}},"coloraxis":{"colorbar":{"outlinewidth":0,"ticks":""}},"colorscale":{"sequential":[[0.0,"#0d0887"],[0.1111111111111111,"#46039f"],[0.2222222222222222,"#7201a8"],[0.3333333333333333,"#9c179e"],[0.4444444444444444,"#bd3786"],[0.5555555555555556,"#d8576b"],[0.6666666666666666,"#ed7953"],[0.7777777777777778,"#fb9f3a"],[0.8888888888888888,"#fdca26"],[1.0,"#f0f921"]],"sequentialminus":[[0.0,"#0d0887"],[0.1111111111111111,"#46039f"],[0.2222222222222222,"#7201a8"],[0.3333333333333333,"#9c179e"],[0.4444444444444444,"#bd3786"],[0.5555555555555556,"#d8576b"],[0.6666666666666666,"#ed7953"],[0.7777777777777778,"#fb9f3a"],[0.8888888888888888,"#fdca26"],[1.0,"#f0f921"]],"diverging":[[0,"#8e0152"],[0.1,"#c51b7d"],[0.2,"#de77ae"],[0.3,"#f1b6da"],[0.4,"#fde0ef"],[0.5,"#f7f7f7"],[0.6,"#e6f5d0"],[0.7,"#b8e186"],[0.8,"#7fbc41"],[0.9,"#4d9221"],[1,"#276419"]]},"xaxis":{"gridcolor":"white","linecolor":"white","ticks":"","title":{"standoff":15},"zerolinecolor":"white","automargin":true,"zerolinewidth":2},"yaxis":{"gridcolor":"white","linecolor":"white","ticks":"","title":{"standoff":15},"zerolinecolor":"white","automargin":true,"zerolinewidth":2},"scene":{"xaxis":{"backgroundcolor":"#E5ECF6","gridcolor":"white","linecolor":"white","showbackground":true,"ticks":"","zerolinecolor":"white","gridwidth":2},"yaxis":{"backgroundcolor":"#E5ECF6","gridcolor":"white","linecolor":"white","showbackground":true,"ticks":"","zerolinecolor":"white","gridwidth":2},"zaxis":{"backgroundcolor":"#E5ECF6","gridcolor":"white","linecolor":"white","showbackground":true,"ticks":"","zerolinecolor":"white","gridwidth":2}},"shapedefaults":{"line":{"color":"#2a3f5f"}},"annotationdefaults":{"arrowcolor":"#2a3f5f","arrowhead":0,"arrowwidth":1},"geo":{"bgcolor":"white","landcolor":"#E5ECF6","subunitcolor":"white","showland":true,"showlakes":true,"lakecolor":"white"},"title":{"x":0.05},"mapbox":{"style":"light"}}},"xaxis":{"anchor":"y","domain":[0.0,0.45]},"yaxis":{"anchor":"x","domain":[0.0,1.0]},"xaxis2":{"anchor":"y2","domain":[0.55,1.0]},"yaxis2":{"anchor":"x2","domain":[0.0,1.0]},"annotations":[{"font":{"size":16},"showarrow":false,"text":"Sales (M CNY)","x":0.225,"xanchor":"center","xref":"paper","y":1.0,"yanchor":"bottom","yref":"paper"},{"font":{"size":16},"showarrow":false,"text":"Repurchase Rate (%)","x":0.775,"xanchor":"center","xref":"paper","y":1.0,"yanchor":"bottom","yref":"paper"}],"font":{"color":"#bdc3c7"},"margin":{"t":40,"b":40,"l":10,"r":10},"paper_bgcolor":"rgba(0,0,0,0)","plot_bgcolor":"rgba(0,0,0,0)","showlegend":false}});
+Plotly.newPlot('chart4', {"data":[{"marker":{"color":"#3498db"},"name":"Product Count","text":["78","60","18","19","5"],"textfont":{"color":"#e8eaed"},"textposition":"outside","x":["0-10%","10-20%","20-30%","30-50%","50%+"],"y":[78,60,18,19,5],"type":"bar"},{"line":{"color":"#e74c3c"},"marker":{"size":8},"mode":"lines+markers+text","name":"Sales Share %","text":["24.1%","62.3%","7.8%","5.7%","0.1%"],"textfont":{"color":"#e74c3c"},"textposition":"top center","x":["0-10%","10-20%","20-30%","30-50%","50%+"],"y":[24.1,62.3,7.8,5.7,0.1],"type":"scatter"}],"layout":{"template":{"data":{"histogram2dcontour":[{"type":"histogram2dcontour","colorbar":{"outlinewidth":0,"ticks":""},"colorscale":[[0.0,"#0d0887"],[0.1111111111111111,"#46039f"],[0.2222222222222222,"#7201a8"],[0.3333333333333333,"#9c179e"],[0.4444444444444444,"#bd3786"],[0.5555555555555556,"#d8576b"],[0.6666666666666666,"#ed7953"],[0.7777777777777778,"#fb9f3a"],[0.8888888888888888,"#fdca26"],[1.0,"#f0f921"]]}],"choropleth":[{"type":"choropleth","colorbar":{"outlinewidth":0,"ticks":""}}],"histogram2d":[{"type":"histogram2d","colorbar":{"outlinewidth":0,"ticks":""},"colorscale":[[0.0,"#0d0887"],[0.1111111111111111,"#46039f"],[0.2222222222222222,"#7201a8"],[0.3333333333333333,"#9c179e"],[0.4444444444444444,"#bd3786"],[0.5555555555555556,"#d8576b"],[0.6666666666666666,"#ed7953"],[0.7777777777777778,"#fb9f3a"],[0.8888888888888888,"#fdca26"],[1.0,"#f0f921"]]}],"heatmap":[{"type":"heatmap","colorbar":{"outlinewidth":0,"ticks":""},"colorscale":[[0.0,"#0d0887"],[0.1111111111111111,"#46039f"],[0.2222222222222222,"#7201a8"],[0.3333333333333333,"#9c179e"],[0.4444444444444444,"#bd3786"],[0.5555555555555556,"#d8576b"],[0.6666666666666666,"#ed7953"],[0.7777777777777778,"#fb9f3a"],[0.8888888888888888,"#fdca26"],[1.0,"#f0f921"]]}],"contourcarpet":[{"type":"contourcarpet","colorbar":{"outlinewidth":0,"ticks":""}}],"contour":[{"type":"contour","colorbar":{"outlinewidth":0,"ticks":""},"colorscale":[[0.0,"#0d0887"],[0.1111111111111111,"#46039f"],[0.2222222222222222,"#7201a8"],[0.3333333333333333,"#9c179e"],[0.4444444444444444,"#bd3786"],[0.5555555555555556,"#d8576b"],[0.6666666666666666,"#ed7953"],[0.7777777777777778,"#fb9f3a"],[0.8888888888888888,"#fdca26"],[1.0,"#f0f921"]]}],"surface":[{"type":"surface","colorbar":{"outlinewidth":0,"ticks":""},"colorscale":[[0.0,"#0d0887"],[0.1111111111111111,"#46039f"],[0.2222222222222222,"#7201a8"],[0.3333333333333333,"#9c179e"],[0.4444444444444444,"#bd3786"],[0.5555555555555556,"#d8576b"],[0.6666666666666666,"#ed7953"],[0.7777777777777778,"#fb9f3a"],[0.8888888888888888,"#fdca26"],[1.0,"#f0f921"]]}],"mesh3d":[{"type":"mesh3d","colorbar":{"outlinewidth":0,"ticks":""}}],"scatter":[{"fillpattern":{"fillmode":"overlay","size":10,"solidity":0.2},"type":"scatter"}],"parcoords":[{"type":"parcoords","line":{"colorbar":{"outlinewidth":0,"ticks":""}}}],"scatterpolargl":[{"type":"scatterpolargl","marker":{"colorbar":{"outlinewidth":0,"ticks":""}}}],"bar":[{"error_x":{"color":"#2a3f5f"},"error_y":{"color":"#2a3f5f"},"marker":{"line":{"color":"#E5ECF6","width":0.5},"pattern":{"fillmode":"overlay","size":10,"solidity":0.2}},"type":"bar"}],"scattergeo":[{"type":"scattergeo","marker":{"colorbar":{"outlinewidth":0,"ticks":""}}}],"scatterpolar":[{"type":"scatterpolar","marker":{"colorbar":{"outlinewidth":0,"ticks":""}}}],"histogram":[{"marker":{"pattern":{"fillmode":"overlay","size":10,"solidity":0.2}},"type":"histogram"}],"scattergl":[{"type":"scattergl","marker":{"colorbar":{"outlinewidth":0,"ticks":""}}}],"scatter3d":[{"type":"scatter3d","line":{"colorbar":{"outlinewidth":0,"ticks":""}},"marker":{"colorbar":{"outlinewidth":0,"ticks":""}}}],"scattermap":[{"type":"scattermap","marker":{"colorbar":{"outlinewidth":0,"ticks":""}}}],"scattermapbox":[{"type":"scattermapbox","marker":{"colorbar":{"outlinewidth":0,"ticks":""}}}],"scatterternary":[{"type":"scatterternary","marker":{"colorbar":{"outlinewidth":0,"ticks":""}}}],"scattercarpet":[{"type":"scattercarpet","marker":{"colorbar":{"outlinewidth":0,"ticks":""}}}],"carpet":[{"aaxis":{"endlinecolor":"#2a3f5f","gridcolor":"white","linecolor":"white","minorgridcolor":"white","startlinecolor":"#2a3f5f"},"baxis":{"endlinecolor":"#2a3f5f","gridcolor":"white","linecolor":"white","minorgridcolor":"white","startlinecolor":"#2a3f5f"},"type":"carpet"}],"table":[{"cells":{"fill":{"color":"#EBF0F8"},"line":{"color":"white"}},"header":{"fill":{"color":"#C8D4E3"},"line":{"color":"white"}},"type":"table"}],"barpolar":[{"marker":{"line":{"color":"#E5ECF6","width":0.5},"pattern":{"fillmode":"overlay","size":10,"solidity":0.2}},"type":"barpolar"}],"pie":[{"automargin":true,"type":"pie"}]},"layout":{"autotypenumbers":"strict","colorway":["#636efa","#EF553B","#00cc96","#ab63fa","#FFA15A","#19d3f3","#FF6692","#B6E880","#FF97FF","#FECB52"],"font":{"color":"#2a3f5f"},"hovermode":"closest","hoverlabel":{"align":"left"},"paper_bgcolor":"white","plot_bgcolor":"#E5ECF6","polar":{"bgcolor":"#E5ECF6","angularaxis":{"gridcolor":"white","linecolor":"white","ticks":""},"radialaxis":{"gridcolor":"white","linecolor":"white","ticks":""}},"ternary":{"bgcolor":"#E5ECF6","aaxis":{"gridcolor":"white","linecolor":"white","ticks":""},"baxis":{"gridcolor":"white","linecolor":"white","ticks":""},"caxis":{"gridcolor":"white","linecolor":"white","ticks":""}},"coloraxis":{"colorbar":{"outlinewidth":0,"ticks":""}},"colorscale":{"sequential":[[0.0,"#0d0887"],[0.1111111111111111,"#46039f"],[0.2222222222222222,"#7201a8"],[0.3333333333333333,"#9c179e"],[0.4444444444444444,"#bd3786"],[0.5555555555555556,"#d8576b"],[0.6666666666666666,"#ed7953"],[0.7777777777777778,"#fb9f3a"],[0.8888888888888888,"#fdca26"],[1.0,"#f0f921"]],"sequentialminus":[[0.0,"#0d0887"],[0.1111111111111111,"#46039f"],[0.2222222222222222,"#7201a8"],[0.3333333333333333,"#9c179e"],[0.4444444444444444,"#bd3786"],[0.5555555555555556,"#d8576b"],[0.6666666666666666,"#ed7953"],[0.7777777777777778,"#fb9f3a"],[0.8888888888888888,"#fdca26"],[1.0,"#f0f921"]],"diverging":[[0,"#8e0152"],[0.1,"#c51b7d"],[0.2,"#de77ae"],[0.3,"#f1b6da"],[0.4,"#fde0ef"],[0.5,"#f7f7f7"],[0.6,"#e6f5d0"],[0.7,"#b8e186"],[0.8,"#7fbc41"],[0.9,"#4d9221"],[1,"#276419"]]},"xaxis":{"gridcolor":"white","linecolor":"white","ticks":"","title":{"standoff":15},"zerolinecolor":"white","automargin":true,"zerolinewidth":2},"yaxis":{"gridcolor":"white","linecolor":"white","ticks":"","title":{"standoff":15},"zerolinecolor":"white","automargin":true,"zerolinewidth":2},"scene":{"xaxis":{"backgroundcolor":"#E5ECF6","gridcolor":"white","linecolor":"white","showbackground":true,"ticks":"","zerolinecolor":"white","gridwidth":2},"yaxis":{"backgroundcolor":"#E5ECF6","gridcolor":"white","linecolor":"white","showbackground":true,"ticks":"","zerolinecolor":"white","gridwidth":2},"zaxis":{"backgroundcolor":"#E5ECF6","gridcolor":"white","linecolor":"white","showbackground":true,"ticks":"","zerolinecolor":"white","gridwidth":2}},"shapedefaults":{"line":{"color":"#2a3f5f"}},"annotationdefaults":{"arrowcolor":"#2a3f5f","arrowhead":0,"arrowwidth":1},"geo":{"bgcolor":"white","landcolor":"#E5ECF6","subunitcolor":"white","showland":true,"showlakes":true,"lakecolor":"white"},"title":{"x":0.05},"mapbox":{"style":"light"}}},"font":{"color":"#bdc3c7"},"margin":{"t":10,"b":40,"l":10,"r":10},"paper_bgcolor":"rgba(0,0,0,0)","plot_bgcolor":"rgba(0,0,0,0)"}});
+Plotly.newPlot('chart5', {"data":[{"hovertemplate":"%{text}\u003cbr\u003eSales: ¥%{x:.0f}万\u003cbr\u003eRepurchase: %{y:.1f}%\u003cextra\u003e\u003c\u002fextra\u003e","marker":{"color":{"dtype":"f8","bdata":"AAAAAAAA8D8AAAAAAADwPyPb+X5qvOY\u002fx4ddKwcY4j\u002f7OxjgtFvgP\u002fAPDJqwqt0\u002fSFD8GHPX2j+W0bCCRITaP5gObZedfNg\u002f8rSrQRsy2D9j0IgJjZPXP1aGgK5c1NY\u002fAtwyrMu91j\u002feCpgYMtXVP74oShXDztU\u002faW\u002fwhclU1T9pb\u002fCFyVTVP\u002fN8InlF9tQ\u002f9qPoADD01D9cvwAvJoHUP+9G++PidNQ\u002f+kthOM891D+Z\u002fGTvugnUP64LxmaXmNM\u002fbDjg25fX0j\u002f5wYTTNCfSP6+2Yn\u002fZPdE\u002fzs0kYrArzz\u002fG7vMbgBHPP4rJJvNGxM0\u002fKtnZD6SRzT9qTKiT8ALNPwwbEq9ndcw\u002f08aG7q4qzD8V0A\u002flb9bLP7IaMxgqgss\u002fl3OikRQvyz\u002fgT42XbhLLPw0Hug9wv8o\u002fza5fac5Eyj+vQaUj2v\u002fJP2PZ3yqaw8k\u002fmpmZmZmZyT9zJ28wPlbJP4rQDSAFG8k\u002fF7xnwdPPyD+k71Jyb0fIP01iqCQnMsg\u002fxeaezMKhxz9fY8iaR5HHPwDBNYdFu8Y\u002fqFfKMsSxxj9Wfv09jIzGPxj249WOr8U\u002fdGV7iuVsxT8uIR\u002f0bFbFPy4hH\u002fRsVsU\u002fLiEf9GxWxT82frGxGynFPwgr0JKaHMU\u002fo+3txUCCxD8V++qTUOrDP+7xbChQZsM\u002flq1ZCRZdwz9kywL6syPDP3c05KFpA8M\u002fbTlL6dbZwj8BixguB9HCP19\u002fnAVyrsI\u002fX5hMFYxKwj+wbtpvyQLCP6V4zd\u002fA98E\u002fSTDaYSjWwT\u002fxmxPJXbTBPwr\u002fmCvgbcE\u002f0zVLvU1ZwT+yKdPqMlfBP7b9uvsvOME\u002fAJ1WMoINwT\u002fhNuB8JJfAPxYyquLlhcA\u002f59HAzqF3wD+hE0NDfUbAP9leoxE8x78\u002fQ+WTQRyavj8+TFxjFHa+P4Hg7VJWTr0\u002fuK8D54wovT9qveUITJq8P\u002fKwUGuad7w\u002fFItrekdnvD8SRENLm+e7P9YlyfewuLs\u002fS3Y9mKJOuz\u002fHC488DBm7Pwp7Hlc8tro\u002f6crTIjquuj\u002ffpTHG9H66P7jvGy6QXLo\u002fsaH5MKc7uj\u002f1i9gFICa6P7q00brT6rk\u002fmpmZmZmZuT8Dmggbnl65P+19ITU9Rrk\u002fbDO2IhTLuD+LZ8imssS4P9d+fTShoLg\u002fmJ\u002fmS7V6uD93xBoRnlG4P0HxY8xdS7g\u002f\u002fYdVRP47uD\u002fxY8xdS8i3P5viyNMxo7c\u002fodY07zhFtz+h1jTvOEW3PxZfHt3pQrc\u002f5hj7EQO6tj9clge\u002fpl+2P1r1udqK\u002fbU\u002filVBmsdXtT+9nJQ1ukC1PxVYHuDBP7U\u002fDr4wmSoYtT93btljEcW0P5AUkWEVb7Q\u002fd\u002fy2e687tD+UzkKHfKGzP\u002fWmOIa\u002fkrM\u002fyWL2PP5ysz8Spb3BFyazP3rfLBg1nrI\u002ffxPzUn6Bsj9snP9GHFiyP9Y07zhFR7I\u002fZVZTiqxEsj9Ei2zn+6mxPzSbnzzLkbE\u002fwvBZMXMssT9h60H9GIGwP9hJvpS+0a8\u002fZpEnAooarz9IGvUpZeauPzPmriXkg64\u002fxYQary8\u002frj\u002fcl5dsl9asPx1mrNMMxqs\u002fz+Sy6JwKqz8hoQTwNYmqPxHFaeF7zak\u002fUesSVRnCqT9Xfa62Yn+pP1ARZwZmTqk\u002fUrgehetRqD\u002f\u002fVLsr0fSnP78OnDOitKc\u002fr3SzEwOspz9mYt78H\u002fimP2Ar6NoTRKY\u002fgNk9eViopT80BYAKpASlPxKlvcEXJqM\u002f+rEE2yKHoj9qrGFU9sWhP8QY10icx6A\u002fdr3tN7uloD\u002fFvTGptOafPxTnlWHoPJs\u002fUn6vx6ZFlz8K16NwPQqXPwAM36tEbJU\u002fxPytA2ZMlT\u002fCoOMNDZuTP9kIG2MUk5M\u002fTS4H\u002fB42kz8830+Nl26SP1ioNc07TpE\u002fHxS2PY91jj8DDYKgTkSFP78BQsH\u002ffX4\u002fAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA="},"colorbar":{"len":0.3,"tickcolor":"#bdc3c7","tickfont":{"color":"#bdc3c7"},"title":{"font":{"color":"#bdc3c7"},"text":"Repurchase Rate"}},"colorscale":[[0.0,"rgb(165,0,38)"],[0.1,"rgb(215,48,39)"],[0.2,"rgb(244,109,67)"],[0.3,"rgb(253,174,97)"],[0.4,"rgb(254,224,139)"],[0.5,"rgb(255,255,191)"],[0.6,"rgb(217,239,139)"],[0.7,"rgb(166,217,106)"],[0.8,"rgb(102,189,99)"],[0.9,"rgb(26,152,80)"],[1.0,"rgb(0,104,55)"]],"line":{"color":"white","width":0.5},"showscale":true,"size":8},"mode":"markers","text":["145轻上牛牛草莓小奶","245小轻甘夏桑菊凉茶","简零控高纤低GI饼干","150轻上轻颜燕窝阿胶燕麦奶","1L轻上原味0糖生椰","245轻滋畅西梅茉莉茶","245轻滋畅西梅摇摇冻","60纤冠军左旋白芸豆纤维饮西柚味","245轻滋畅西梅乌龙茶","245简零控茉莉雪芽奶茶","150轻快活100%橙汁","1L轻上100%葡萄汁","1L轻上100%苹果汁","220轻滋畅西梅多多发酵酸奶","180轻滋畅西梅汁","220简零控奇亚籽黄瓜西芹果蔬奶昔","150轻上牛牛富锌山药南瓜小糊糊","220轻上原味0糖生椰","1L轻上轻颜车厘子双莓汁","245轻上白桦树汁","245轻上100%苹果汁","1L轻上100%芒果汁","245自律零羽衣甘蓝黑咖","1L轻上100%橙汁","1L轻上100%水蜜桃汁","245轻上椰子水","1L轻上芭乐青提复合果蔬汁","245椰泰椰子水","245轻滋畅西梅柠檬茶","60轻滋畅西梅饮","150轻快活100%水蜜桃汁","220轻上水果桶100%葡萄汁","245轻上纤冠军奇亚籽纤维饮","220轻上水果桶100%苹果汁","60纤冠军白芸豆益生元高纤饮","1L轻上椰子水","235轻上桦树白桦树汁水飞蓟肝肽饮","1L轻上轻颜红石榴桑葚汁","245自律零西梅黑咖","950轻上一起燃电解质水海盐荔枝味","950轻上一起燃电解质水西柚味","220轻上烤椰奶","245东方补者红参石榴汁","220轻滋畅西梅奇亚籽奶昔","138轻滋畅羽衣甘蓝乳酸菌","245东方补者五黑坚果芝麻糊","950轻上一起燃电解质水青柠味","220轻上叶黄素酯蓝莓酸奶","60自律零左旋燃解力黑咖啡","138轻滋畅西梅乳酸菌","235东方补者橘红雪梨枇杷汁","360轻上椰子水","220轻上水果桶100%芒果汁","60轻滋畅油柑西梅饮","245简零控白芸豆茉莉雪芽奶茶PLUS版","360简零控茉莉雪芽奶茶","东方补者西洋参玉灵膏","120自律零维B柠檬姜黄饮","245轻上铁棍山药玉米汁","220简零控可可燕麦奶昔","235东方补者六味地黄芝麻糊","245东方补者燕窝杏仁七白饮","220轻上水果桶100%橙汁","400东方补者冬瓜荷叶薏米水","1L东方补者乌梅熬山楂","220轻上海盐0糖生椰","400东方补者苹果黄芪水","235轻滋畅西梅苹果醋","245轻上百合玉竹雪梨饮","235东方补者枸杞杏皮茶","220轻上水果桶100%水蜜桃汁","235东方补者枸杞桑椹汁","150轻上牛牛山药苹果四神汤","220轻上厚椰乳植物蛋白饮料","60轻滋畅清畅饮西梅双柚味","60纤冠军多维血橙EGCG饮","138轻上牛牛草莓小奶","235纤冠军羽衣甘蓝油柑汁","150元他命原味生牛乳","220简零控香蕉火龙果奶昔","220东方补者六味地黄饮","225轻滋畅西梅芭乐纤维饮","220自律零生椰丝绒拿铁","245东方补者桂花六物酸梅汤","150轻上牛牛高钙椰","360轻上白桦树汁","400东方补者铁皮石斛水","500轻上一起燃电解质水西柚味","950轻上粉芭乐茉莉果汁茶","1L轻上熬山楂","245东方补者人参红黑枸杞汁","245自律零牛马生椰拿铁","245轻上白桦树汁苏打水蜂蜜柠檬风味","60轻上轻颜阿胶红参元气饮","138轻上牛牛蓝莓小奶","245东方补者红豆薏米水","245轻上原味0糖生椰","220轻上樱花0糖生椰","150轻快活100%苹果汁","950轻上石榴云雾绿茶果汁茶","245轻搭档蜂蜜柠檬水","950轻上轻颜VC1000柠檬水","950自律零冷萃无糖黑咖","245鲜谷多铁棍山药玉米汁","150轻上牛牛多维橙光果蔬汁","245小轻甘竹蔗茅根水","1L轻上白桦树汁","220简零控羽衣甘蓝青苹果奶昔","380轻上白桦树苏打水","220自律零白芸豆生椰丝绒","250轻上银耳枇杷小吊梨","245自律零乌龙美式咖啡","1L椰泰椰子水","950轻上凤梨白茶果汁茶","360轻上原味0糖生椰","360罗伯克茉莉拿铁","245自律零维B羽衣甘蓝水","245小轻甘金银花凉茶","150鲜谷多哈基米南北绿豆豆浆","1L轻上金银花双柚汁","220简零控牛油果奶昔","245轻上白桦树汁苏打水蜂蜜白桃风味","245轻上轻颜车厘子双莓汁","900东方补者红枣枸杞桂圆水","245轻上轻颜红石榴血橙汁","150自律零西梅奇亚籽豆浆","150轻上牛牛钙多多芝麻糊","150轻快活100%西梅汁","150轻快活100%葡萄汁","950轻上苹果大红袍果汁茶","120轻上白桦树汁","138轻上牛牛核桃小奶","950纤冠军纤纤柠檬水","245东方补者乌梅熬山楂","60轻上牛牛VD钙 γ-氨基丁酸骨胶原小分子肽饮","245轻搭档铁皮石斛无花果饮","220东方补者八珍谷物燕麦奶昔","220简零控百香果西柚奇亚籽果昔","220东方补者桑葚五黑酸奶","150轻上牛牛钙铁锌多莓好","220轻上黄芪党参0糖生椰","150轻上牛牛山楂七星茶","400东方补者菊花雪莲果","220轻上白桦树汁","235纤冠军羽衣甘蓝百香果西柚汁","150轻快活红石榴桑葚汁","400轻滋畅西梅柠檬水","235纤冠军芭乐油柑汁","150轻上牛牛猴多C猕猴桃汁","235自律零牛油果防弹生酮奶咖咖啡","245轻上轻颜红石榴桑葚汁","900东方补者苹果黄芪水","950自律零VB羽衣甘蓝芭乐柠檬水","900东方补者红豆薏米水","245轻上轻颜小青柠汁","245轻上银耳枇杷小吊梨","220简零控芭乐柠檬奇亚籽果昔","245东方补者五黑添瑞燕麦奶","900东方补者莲子百合绿豆水","900东方补者铁皮石斛水","245小轻甘陈皮罗汉果","奇亚籽颗粒","220轻上牛牛AD高钙乳铁蛋白奶","245小轻甘菊花枸杞决明子茶","400东方补者红枣枸杞桂圆水","900东方补者冬瓜荷叶薏米水","150轻上牛牛叶黄素酯蓝莓小葡萄汁","400轻滋畅西梅荷叶水","220简零控牛油果羽衣甘蓝奇亚籽果昔","900东方补者菊花雪莲果","145轻上牛牛核桃小奶","245轻上轻颜荔枝汁","150轻上牛牛叶黄素酯胡萝卜蓝莓汁","150元他命蓝莓酸奶","400东方补者莲子百合绿豆水","羽衣甘蓝粉","220轻上100%车厘子汁","400轻滋畅西梅椰子水","500轻上轻颜VC1000柠檬水","245轻搭档黄皮甘蔗柠檬茶","150元他命西梅酸奶","150哪吒同学0糖生椰","220轻上猴头菇八珍酸奶","220轻上熬山楂","220轻上水果桶混合装果汁","220简零控猕猴桃黄瓜西芹果蔬奶昔","20轻滋畅益生菌固体饮料","150轻上轻颜胶原蛋白肽杏仁乳","180轻滋畅油柑西梅饮","1L轻上100%果汁","150元他命甜牛奶","150自律零抹茶豆乳茶","120轻上椰子水","1.25L轻上原味0糖生椰","245东方补者红参桃桃石榴饮","245自律零多维橙C美式咖啡","245纤冠军羽衣甘蓝奇亚籽番茄汁","245东方补者茉莉柠檬紫苏饮","245轻上金银花双柚汁","500轻上苹果大红袍果汁茶","600小轻甘金银花凉茶","500轻上石榴云雾绿茶果汁茶","400鲜汁美芭乐青提汁","500轻上凤梨白茶果汁茶","500轻上粉芭乐茉莉果汁茶","400鲜汁美100%葡萄汁","400轻上白桦树乌龙茶无糖茶","268轻滋畅西梅多多发酵酸奶","380小轻甘金银花凉茶","360椰泰椰子水","300轻滋畅西梅多多发酵酸奶","400东方补者茯苓红豆薏米水","400鲜汁美100%椰子水","东方补者茯湿膏"],"x":{"dtype":"f8","bdata":"7Q2+MJkqeD8730+Nl26CP7N78rBQa4o\u002fR3L5D+m38z8ydy0hH0QwQLIubqMBvPg\u002fKe0NvjCZuj9a9bnaij0gQAaBlUOL7DdAqaROQBNhsz8u\u002fyH99oU6QMpUwaikjixAhslUwagkMECdgCbChl9xQD55WKg1zRJAGlHaG3xhsj82zTtO0ZGcP6s+V1uxw21Adk8eFmrNDkDSAN4CCYJLQAisHFpkhWlALSEf9GwWIUCDL0ymCgYkQLIubqMB3CVAObTIdr4fIEDy0k1iENaGQCxlGeJYF88\u002fqRPQRNjwpD9NFYxK6gQJQFXBqKROvHBAQ61p3nGK6D8gQfFjzF3TP5LLf0i\u002ffThA5j+k374OB0Dek4eFWgNWQKs+V1ux3ydA7zhFR3JBQECxv+yePCyUPyQofoy5M0BAaJHtfD\u002fVK0DcaABvgQQrQK36XG3F\u002fuI\u002fuB6F61G4jj9hw9MrZUt+QBDpt68D59g\u002fkX77OnCCVED6fmq8dHMrQMdLN4lBoEtARGlv8IWJJEAldQKaCIt6QNDVVuwvu8c\u002f0SLb+X4qKkD0\u002fdR46SaxP4JzRpT23kBA+THmriVkC0C3Yn\u002fZPXmYP6g1zTtO0ZE\u002f7Q2+MJkqiD9AE2HD09NPQNjw9EpZ3kdA6Ugu\u002fyFlRUDOiNLe4MsQQIj029eBc\u002fc\u002f48eYu5YAPUDHuriNBiA+QMZtNIC3QPY\u002f5BQdyeVnQkBoImx4eqXEP2Rd3EYDePU\u002f+MJkqmBUkj\u002fl0CLb+X7KP7wFEhQ\u002f3llAtvP91DgzqkAAkX77OjAQQPYoXI\u002fC9SFALbKd76fG0z+iRbbz\u002fUt1QJVliGNdLGNAdQKaCBuenj\u002fhC5OpgnN4QP2H9NvXgTBA2ht8YTJFRkBcIEHxYwBlQOcdp+hIJlhAqz5XW7EsfEAs1JrmHafYP15LyAc9m9k\u002firDh6ZWy1D\u002fBqKROQAtJQAMJih9j7po\u002fPujZrPogiUB7FK5H4XrMP+QUHcnlP8Q\u002fnl4pyxAnK0Bhw9MrZZ+AQKK0N\u002fjCNENAf\u002fs6cM6Ikj9\u002f+zpwzggYQK1p3nGKjv8\u002fcayL22hoR0A3GsBbIEEoQOC+DpwzWZ1A9P3UeOkmoT\u002feAgmKH2P+P7G\u002f7J48XDZA7FG4HoXzZUCoxks3iUHqP4MvTKYKxkxArkfhehSu1z\u002frc7UV+5NUQINRSZ2AJvY\u002fC0YldQKa9D+ad5yiI7nkPzqSy39If0VAKqkT0ETYoD\u002fOiNLe4AujP\u002fwYc9cSMiBAIEHxY8x4fUAg0m9fB87ZP6s+V1uxv8Q\u002flIeFWlMKgEAc6+I2GsC7PyZTBaOSOhlA2ht8YTJVoD\u002ftDb4wmaoMQFyPwvUoXNc\u002f3GgAb4GEAkCoV8oyxLHxP8iYu5aQD\u002fY\u002fH\u002fRsVn3eQkBlqmBUUqcJQCKOdXEbdHFA4QuTqYKREUDQs1n1uW5aQDbNO07Rkbw\u002f+aBns+pzpT9mZmZmZma2P\u002faX3ZOHGVNAiGNd3EaHUUBbQj7o2dxEQBWMSuoENNE\u002f7Q2+MJn6X0C8dJMYBNYGQMDsnjws1P8\u002f0SLb+X7sdUAkl\u002f+QfvvwPzEIrBxaZApApb3BF6behEAK16NwPaJMQL8OnDOitOM\u002fpgpGJXWCAUAhsHJoke39P8NkqmBU5HVAoWez6nO1+z+8BRIUP4YuQEp7gy9MpuY\u002f7Z48LNTaOkCyLm6jATwIQKVOQBNhw\u002fQ\u002fI9v5fmq89z9EaW\u002fwhWkiQE7RkVz+Q6o\u002fLbKd76dGDEC3Yn\u002fZPfkkQBniWBe30bA\u002fBFYOLbLdEUD129eBc25KQG\u002fwhclUwfA\u002fDi2yne\u002fPQEBuNIC3QILCP13cRgN4ixJAlkOLbOf7D0D2l92Th4UNQDeJQWDl0No\u002fzczMzMzM0D86kst\u002fSL+9P03zjlN0JNM\u002flWWIY13c5D9d3EYDeKNJQF66SQwCKy5AejarPldboT91ApoIG56eP\u002fyp8dJNYpA\u002f+n5qvHSTaD\u002fOiNLe4AvxP\u002fyp8dJNYnA\u002fCRueXinLcD8aUdobfGGiPzm0yHa+n5o\u002fXynLEMc6G0BUdCSX\u002f5CuP1g5tMh2vp8\u002fFYxK6gQ0kT8AAAAAAAAAALdif9k9eZg\u002f+n5qvHSTaD8AAAAAAAAAAPp+arx0k2g\u002fAAAAAAAAAAB56SYxCKycP2EyVTAqqWM\u002fKxiV1Alosj91ApoIG56uP3sUrkfhepQ\u002f93XgnBGlvT8AAAAAAAAAAAAAAAAAAAAA9dvXgXNGhD97FK5H4Xp0PwfOGVHaG6w\u002fAAAAAAAAAADHuriNBvC2P1mGONbFbaQ\u002fAd4CCYofsz8="},"y":{"dtype":"f8","bdata":"AAAAAAAAWUAAAAAAAABZQDMzMzMzw1FAJyTCM4tFTEC43SWeSo9JQHRsWfhZLUdAuB6F61H4REC9IxqGVbdEQGczTR5bIUNAXSVOSyXnQkDN4nIvRmtCQPNoVGjo1UFA4ruHHkfEQUB9yDYjjw5BQNTvoWiICUFACtejcD2qQEAK16NwPapAQJ7xokZmYEBAGMC1gMVeQECAlbjU5QRAQNWeOISi9j9AtwYYyJOgP0Cvyg0WNE8\u002fQEBylZBsnj5AKViOR91wPUAVb3+KQl08QHE9Ctej8DpAycCszCFaOECLktYVrEU4QHRN9m1XQTdAqTFiLMgZN0Cze1vzS6o2QCElxgC5OzZAVUtZqlgBNkCQWvRqh781QNvs5+KwfTVATurGEcg8NUBnZmZmZiY1QIJVSYyP5TRAkMBSQsGFNEBRG9lr4k80QNXhfnHQIDRAAAAAAAAANEDS1taVYMszQOzKCgEcnTNA8goZb11iM0A4y1ARz\u002fcyQMyMo5Qu5zJASiTcL2B2MkCijezwf2kyQMj+oVFOwjFAexSuR+G6MUCzCm6QzZ0xQEMYGpcn8TBAQ2cwVBO9MEDsUbgehaswQOxRuB6FqzBA7FG4HoWrMECaqtKiHYgwQJ6hssJYfjBAp+GhmsIFMEBRKB\u002fnHR4vQAQ6Kj\u002fdTy5AOh+cbnJBLkDMXaQ2yectQPqR9AxVtS1AuomFzF90LUAyWQY4m2YtQASHxCiSMC1AFK5H4XqULEDzTMW+WiQsQIIMsV0dEyxAcuvkGJ\u002feK0Cpoy6K0qkrQIAOH0SuOytAGoTFd4kbK0Am8emOPxgrQGwsVPnK5ypAUFWnbhulKkDAVR4DKewpQELuKTI30SlA+UcN0+y6KUCszhi5I24pQBqix+2m0yhAHIs7E2boJ0CQG6DtP8wnQGXXyXAz5SZASOF6FK7HJkD7e\u002fNmi1gmQD0K16NwPSZAqASk168wJkAujcxS8cwlQI8llUFKqCVAawTwBm9VJUAzwU+PkSslQCDQDyRf3iRAhnY1ax3YJECWydY6L7MkQEjTBaRQmCRAUgZDnpp+JEBXLZEEyW0kQDHV82l1PyRAAAAAAAAAJEBSuB6F69EjQGEqgtHfviNALFgeu6deI0DlkEySq1kjQBgLAvF9PSNAryxMo90fI0B96Vx9w\u002f8iQHsUrkfh+iJAPtJipd7uIkAUrkfhepQiQAnxdO1+dyJArkfhehQuIkCuR+F6FC4iQEm6v7RGLCJAdCsMZlLBIUB47T1FunohQK5H4XoULiFA1AqD8JOsIEB0Gtx5kZogQNC0F3fPmSBAexSuR+F6IEBN3gGW9TkgQCGwcmiR7R9AeupNMUKdH0DHYliTUqweQN+EuEFLlR5AWvpAP61jHkDsUbgehesdQC8dxvUyFx1Ads6bYVXqHEBpZO8urKkcQI7C9ShcjxxA\u002fjYimE2LHECamZmZmZkbQIFiuY7NcxtAL4gc\u002fXPVGkDI\u002f7YLt8kZQLGpNOTc2xhAmOmu0btMGECIfMcI\u002fyMYQNijcD0K1xdAurfMQF2hF0CkbtZMpocWQMevXgW6shVAwsLLlUogFUDinYMjMrsUQPWhGsiIKBRA18d2yqMfFEDsUbgehesTQIaFALU\u002fxRNAAAAAAAAAE0BnWipqQ7cSQIXrUbgehRJAKTNkZ2J+EkDgvI392PERQONhBYMvZRFA7FG4HoXrEEARBDQooGsQQOxRuB6F6w1AF1Y3dibzDEBmndjjUMULQLIW0DHkNwpACHhjh\u002fQCCkBC3C4kPewIQIgcPYyVRwVAsBoBTGouAkAAAAAAAAACQGBBRqaVvABAee3fsq+jAEAvq7NlRKL+P9M92trPlf4\u002fWDjLaZAE\u002fj\u002fOzMzMzMz8PwrXo3A9Cvs\u002fuD826NfL9z8qmmVtXZ3wP12R+85v0uc\u002fAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA="},"type":"scatter"}],"layout":{"template":{"data":{"histogram2dcontour":[{"type":"histogram2dcontour","colorbar":{"outlinewidth":0,"ticks":""},"colorscale":[[0.0,"#0d0887"],[0.1111111111111111,"#46039f"],[0.2222222222222222,"#7201a8"],[0.3333333333333333,"#9c179e"],[0.4444444444444444,"#bd3786"],[0.5555555555555556,"#d8576b"],[0.6666666666666666,"#ed7953"],[0.7777777777777778,"#fb9f3a"],[0.8888888888888888,"#fdca26"],[1.0,"#f0f921"]]}],"choropleth":[{"type":"choropleth","colorbar":{"outlinewidth":0,"ticks":""}}],"histogram2d":[{"type":"histogram2d","colorbar":{"outlinewidth":0,"ticks":""},"colorscale":[[0.0,"#0d0887"],[0.1111111111111111,"#46039f"],[0.2222222222222222,"#7201a8"],[0.3333333333333333,"#9c179e"],[0.4444444444444444,"#bd3786"],[0.5555555555555556,"#d8576b"],[0.6666666666666666,"#ed7953"],[0.7777777777777778,"#fb9f3a"],[0.8888888888888888,"#fdca26"],[1.0,"#f0f921"]]}],"heatmap":[{"type":"heatmap","colorbar":{"outlinewidth":0,"ticks":""},"colorscale":[[0.0,"#0d0887"],[0.1111111111111111,"#46039f"],[0.2222222222222222,"#7201a8"],[0.3333333333333333,"#9c179e"],[0.4444444444444444,"#bd3786"],[0.5555555555555556,"#d8576b"],[0.6666666666666666,"#ed7953"],[0.7777777777777778,"#fb9f3a"],[0.8888888888888888,"#fdca26"],[1.0,"#f0f921"]]}],"contourcarpet":[{"type":"contourcarpet","colorbar":{"outlinewidth":0,"ticks":""}}],"contour":[{"type":"contour","colorbar":{"outlinewidth":0,"ticks":""},"colorscale":[[0.0,"#0d0887"],[0.1111111111111111,"#46039f"],[0.2222222222222222,"#7201a8"],[0.3333333333333333,"#9c179e"],[0.4444444444444444,"#bd3786"],[0.5555555555555556,"#d8576b"],[0.6666666666666666,"#ed7953"],[0.7777777777777778,"#fb9f3a"],[0.8888888888888888,"#fdca26"],[1.0,"#f0f921"]]}],"surface":[{"type":"surface","colorbar":{"outlinewidth":0,"ticks":""},"colorscale":[[0.0,"#0d0887"],[0.1111111111111111,"#46039f"],[0.2222222222222222,"#7201a8"],[0.3333333333333333,"#9c179e"],[0.4444444444444444,"#bd3786"],[0.5555555555555556,"#d8576b"],[0.6666666666666666,"#ed7953"],[0.7777777777777778,"#fb9f3a"],[0.8888888888888888,"#fdca26"],[1.0,"#f0f921"]]}],"mesh3d":[{"type":"mesh3d","colorbar":{"outlinewidth":0,"ticks":""}}],"scatter":[{"fillpattern":{"fillmode":"overlay","size":10,"solidity":0.2},"type":"scatter"}],"parcoords":[{"type":"parcoords","line":{"colorbar":{"outlinewidth":0,"ticks":""}}}],"scatterpolargl":[{"type":"scatterpolargl","marker":{"colorbar":{"outlinewidth":0,"ticks":""}}}],"bar":[{"error_x":{"color":"#2a3f5f"},"error_y":{"color":"#2a3f5f"},"marker":{"line":{"color":"#E5ECF6","width":0.5},"pattern":{"fillmode":"overlay","size":10,"solidity":0.2}},"type":"bar"}],"scattergeo":[{"type":"scattergeo","marker":{"colorbar":{"outlinewidth":0,"ticks":""}}}],"scatterpolar":[{"type":"scatterpolar","marker":{"colorbar":{"outlinewidth":0,"ticks":""}}}],"histogram":[{"marker":{"pattern":{"fillmode":"overlay","size":10,"solidity":0.2}},"type":"histogram"}],"scattergl":[{"type":"scattergl","marker":{"colorbar":{"outlinewidth":0,"ticks":""}}}],"scatter3d":[{"type":"scatter3d","line":{"colorbar":{"outlinewidth":0,"ticks":""}},"marker":{"colorbar":{"outlinewidth":0,"ticks":""}}}],"scattermap":[{"type":"scattermap","marker":{"colorbar":{"outlinewidth":0,"ticks":""}}}],"scattermapbox":[{"type":"scattermapbox","marker":{"colorbar":{"outlinewidth":0,"ticks":""}}}],"scatterternary":[{"type":"scatterternary","marker":{"colorbar":{"outlinewidth":0,"ticks":""}}}],"scattercarpet":[{"type":"scattercarpet","marker":{"colorbar":{"outlinewidth":0,"ticks":""}}}],"carpet":[{"aaxis":{"endlinecolor":"#2a3f5f","gridcolor":"white","linecolor":"white","minorgridcolor":"white","startlinecolor":"#2a3f5f"},"baxis":{"endlinecolor":"#2a3f5f","gridcolor":"white","linecolor":"white","minorgridcolor":"white","startlinecolor":"#2a3f5f"},"type":"carpet"}],"table":[{"cells":{"fill":{"color":"#EBF0F8"},"line":{"color":"white"}},"header":{"fill":{"color":"#C8D4E3"},"line":{"color":"white"}},"type":"table"}],"barpolar":[{"marker":{"line":{"color":"#E5ECF6","width":0.5},"pattern":{"fillmode":"overlay","size":10,"solidity":0.2}},"type":"barpolar"}],"pie":[{"automargin":true,"type":"pie"}]},"layout":{"autotypenumbers":"strict","colorway":["#636efa","#EF553B","#00cc96","#ab63fa","#FFA15A","#19d3f3","#FF6692","#B6E880","#FF97FF","#FECB52"],"font":{"color":"#2a3f5f"},"hovermode":"closest","hoverlabel":{"align":"left"},"paper_bgcolor":"white","plot_bgcolor":"#E5ECF6","polar":{"bgcolor":"#E5ECF6","angularaxis":{"gridcolor":"white","linecolor":"white","ticks":""},"radialaxis":{"gridcolor":"white","linecolor":"white","ticks":""}},"ternary":{"bgcolor":"#E5ECF6","aaxis":{"gridcolor":"white","linecolor":"white","ticks":""},"baxis":{"gridcolor":"white","linecolor":"white","ticks":""},"caxis":{"gridcolor":"white","linecolor":"white","ticks":""}},"coloraxis":{"colorbar":{"outlinewidth":0,"ticks":""}},"colorscale":{"sequential":[[0.0,"#0d0887"],[0.1111111111111111,"#46039f"],[0.2222222222222222,"#7201a8"],[0.3333333333333333,"#9c179e"],[0.4444444444444444,"#bd3786"],[0.5555555555555556,"#d8576b"],[0.6666666666666666,"#ed7953"],[0.7777777777777778,"#fb9f3a"],[0.8888888888888888,"#fdca26"],[1.0,"#f0f921"]],"sequentialminus":[[0.0,"#0d0887"],[0.1111111111111111,"#46039f"],[0.2222222222222222,"#7201a8"],[0.3333333333333333,"#9c179e"],[0.4444444444444444,"#bd3786"],[0.5555555555555556,"#d8576b"],[0.6666666666666666,"#ed7953"],[0.7777777777777778,"#fb9f3a"],[0.8888888888888888,"#fdca26"],[1.0,"#f0f921"]],"diverging":[[0,"#8e0152"],[0.1,"#c51b7d"],[0.2,"#de77ae"],[0.3,"#f1b6da"],[0.4,"#fde0ef"],[0.5,"#f7f7f7"],[0.6,"#e6f5d0"],[0.7,"#b8e186"],[0.8,"#7fbc41"],[0.9,"#4d9221"],[1,"#276419"]]},"xaxis":{"gridcolor":"white","linecolor":"white","ticks":"","title":{"standoff":15},"zerolinecolor":"white","automargin":true,"zerolinewidth":2},"yaxis":{"gridcolor":"white","linecolor":"white","ticks":"","title":{"standoff":15},"zerolinecolor":"white","automargin":true,"zerolinewidth":2},"scene":{"xaxis":{"backgroundcolor":"#E5ECF6","gridcolor":"white","linecolor":"white","showbackground":true,"ticks":"","zerolinecolor":"white","gridwidth":2},"yaxis":{"backgroundcolor":"#E5ECF6","gridcolor":"white","linecolor":"white","showbackground":true,"ticks":"","zerolinecolor":"white","gridwidth":2},"zaxis":{"backgroundcolor":"#E5ECF6","gridcolor":"white","linecolor":"white","showbackground":true,"ticks":"","zerolinecolor":"white","gridwidth":2}},"shapedefaults":{"line":{"color":"#2a3f5f"}},"annotationdefaults":{"arrowcolor":"#2a3f5f","arrowhead":0,"arrowwidth":1},"geo":{"bgcolor":"white","landcolor":"#E5ECF6","subunitcolor":"white","showland":true,"showlakes":true,"lakecolor":"white"},"title":{"x":0.05},"mapbox":{"style":"light"}}},"font":{"color":"#bdc3c7"},"margin":{"t":10,"b":50,"l":10,"r":10},"xaxis":{"title":{"text":"Total Sales (10k CNY)"},"color":"#7f8c8d","gridcolor":"#2a3a4a"},"yaxis":{"title":{"text":"Weighted Repurchase Rate (%)"},"color":"#7f8c8d","gridcolor":"#2a3a4a"},"paper_bgcolor":"rgba(0,0,0,0)","plot_bgcolor":"rgba(0,0,0,0)"}});
+Plotly.newPlot('chart6', {"data":[{"hovertemplate":"%{y}\u003cbr\u003eSales: %{x:.0f}万\u003cbr\u003eRepurchase: %{text}\u003cextra\u003e\u003c\u002fextra\u003e","marker":{"color":"#27ae60"},"orientation":"h","text":["28.4%","34.1%","23.3%","32.8%","32.0%","21.7%","32.0%","21.2%","20.9%","36.8%","22.2%","38.3%","51.1%","35.5%","35.7%"],"textfont":{"color":"#e8eaed"},"textposition":"outside","x":{"dtype":"f8","bdata":"8tJNYhDWhkCdgCbChl9xQFXBqKROvHBAqz5XW7HDbUAIrBxaZIVpQN6Th4VaA1ZA0gDeAgmCS0DvOEVHckFAQCQofoy5M0BALv8h\u002ffaFOkCSy39Iv304QAaBlUOL7DdAMnctIR9EMECGyVTBqCQwQMpUwaikjixA"},"y":["245轻上椰子水","220轻滋畅西梅多多发酵酸奶","60轻滋畅西梅饮","220轻上原味0糖生椰","245轻上100%苹果汁","60纤冠军白芸豆益生元高纤饮","245轻上白桦树汁","235轻上桦树白桦树汁水飞蓟肝肽饮","245自律零西梅黑咖","150轻快活100%橙汁","245轻上纤冠军奇亚籽纤维饮","245轻滋畅西梅乌龙茶","1L轻上原味0糖生椰","1L轻上100%苹果汁","1L轻上100%葡萄汁"],"type":"bar"}],"layout":{"template":{"data":{"histogram2dcontour":[{"type":"histogram2dcontour","colorbar":{"outlinewidth":0,"ticks":""},"colorscale":[[0.0,"#0d0887"],[0.1111111111111111,"#46039f"],[0.2222222222222222,"#7201a8"],[0.3333333333333333,"#9c179e"],[0.4444444444444444,"#bd3786"],[0.5555555555555556,"#d8576b"],[0.6666666666666666,"#ed7953"],[0.7777777777777778,"#fb9f3a"],[0.8888888888888888,"#fdca26"],[1.0,"#f0f921"]]}],"choropleth":[{"type":"choropleth","colorbar":{"outlinewidth":0,"ticks":""}}],"histogram2d":[{"type":"histogram2d","colorbar":{"outlinewidth":0,"ticks":""},"colorscale":[[0.0,"#0d0887"],[0.1111111111111111,"#46039f"],[0.2222222222222222,"#7201a8"],[0.3333333333333333,"#9c179e"],[0.4444444444444444,"#bd3786"],[0.5555555555555556,"#d8576b"],[0.6666666666666666,"#ed7953"],[0.7777777777777778,"#fb9f3a"],[0.8888888888888888,"#fdca26"],[1.0,"#f0f921"]]}],"heatmap":[{"type":"heatmap","colorbar":{"outlinewidth":0,"ticks":""},"colorscale":[[0.0,"#0d0887"],[0.1111111111111111,"#46039f"],[0.2222222222222222,"#7201a8"],[0.3333333333333333,"#9c179e"],[0.4444444444444444,"#bd3786"],[0.5555555555555556,"#d8576b"],[0.6666666666666666,"#ed7953"],[0.7777777777777778,"#fb9f3a"],[0.8888888888888888,"#fdca26"],[1.0,"#f0f921"]]}],"contourcarpet":[{"type":"contourcarpet","colorbar":{"outlinewidth":0,"ticks":""}}],"contour":[{"type":"contour","colorbar":{"outlinewidth":0,"ticks":""},"colorscale":[[0.0,"#0d0887"],[0.1111111111111111,"#46039f"],[0.2222222222222222,"#7201a8"],[0.3333333333333333,"#9c179e"],[0.4444444444444444,"#bd3786"],[0.5555555555555556,"#d8576b"],[0.6666666666666666,"#ed7953"],[0.7777777777777778,"#fb9f3a"],[0.8888888888888888,"#fdca26"],[1.0,"#f0f921"]]}],"surface":[{"type":"surface","colorbar":{"outlinewidth":0,"ticks":""},"colorscale":[[0.0,"#0d0887"],[0.1111111111111111,"#46039f"],[0.2222222222222222,"#7201a8"],[0.3333333333333333,"#9c179e"],[0.4444444444444444,"#bd3786"],[0.5555555555555556,"#d8576b"],[0.6666666666666666,"#ed7953"],[0.7777777777777778,"#fb9f3a"],[0.8888888888888888,"#fdca26"],[1.0,"#f0f921"]]}],"mesh3d":[{"type":"mesh3d","colorbar":{"outlinewidth":0,"ticks":""}}],"scatter":[{"fillpattern":{"fillmode":"overlay","size":10,"solidity":0.2},"type":"scatter"}],"parcoords":[{"type":"parcoords","line":{"colorbar":{"outlinewidth":0,"ticks":""}}}],"scatterpolargl":[{"type":"scatterpolargl","marker":{"colorbar":{"outlinewidth":0,"ticks":""}}}],"bar":[{"error_x":{"color":"#2a3f5f"},"error_y":{"color":"#2a3f5f"},"marker":{"line":{"color":"#E5ECF6","width":0.5},"pattern":{"fillmode":"overlay","size":10,"solidity":0.2}},"type":"bar"}],"scattergeo":[{"type":"scattergeo","marker":{"colorbar":{"outlinewidth":0,"ticks":""}}}],"scatterpolar":[{"type":"scatterpolar","marker":{"colorbar":{"outlinewidth":0,"ticks":""}}}],"histogram":[{"marker":{"pattern":{"fillmode":"overlay","size":10,"solidity":0.2}},"type":"histogram"}],"scattergl":[{"type":"scattergl","marker":{"colorbar":{"outlinewidth":0,"ticks":""}}}],"scatter3d":[{"type":"scatter3d","line":{"colorbar":{"outlinewidth":0,"ticks":""}},"marker":{"colorbar":{"outlinewidth":0,"ticks":""}}}],"scattermap":[{"type":"scattermap","marker":{"colorbar":{"outlinewidth":0,"ticks":""}}}],"scattermapbox":[{"type":"scattermapbox","marker":{"colorbar":{"outlinewidth":0,"ticks":""}}}],"scatterternary":[{"type":"scatterternary","marker":{"colorbar":{"outlinewidth":0,"ticks":""}}}],"scattercarpet":[{"type":"scattercarpet","marker":{"colorbar":{"outlinewidth":0,"ticks":""}}}],"carpet":[{"aaxis":{"endlinecolor":"#2a3f5f","gridcolor":"white","linecolor":"white","minorgridcolor":"white","startlinecolor":"#2a3f5f"},"baxis":{"endlinecolor":"#2a3f5f","gridcolor":"white","linecolor":"white","minorgridcolor":"white","startlinecolor":"#2a3f5f"},"type":"carpet"}],"table":[{"cells":{"fill":{"color":"#EBF0F8"},"line":{"color":"white"}},"header":{"fill":{"color":"#C8D4E3"},"line":{"color":"white"}},"type":"table"}],"barpolar":[{"marker":{"line":{"color":"#E5ECF6","width":0.5},"pattern":{"fillmode":"overlay","size":10,"solidity":0.2}},"type":"barpolar"}],"pie":[{"automargin":true,"type":"pie"}]},"layout":{"autotypenumbers":"strict","colorway":["#636efa","#EF553B","#00cc96","#ab63fa","#FFA15A","#19d3f3","#FF6692","#B6E880","#FF97FF","#FECB52"],"font":{"color":"#2a3f5f"},"hovermode":"closest","hoverlabel":{"align":"left"},"paper_bgcolor":"white","plot_bgcolor":"#E5ECF6","polar":{"bgcolor":"#E5ECF6","angularaxis":{"gridcolor":"white","linecolor":"white","ticks":""},"radialaxis":{"gridcolor":"white","linecolor":"white","ticks":""}},"ternary":{"bgcolor":"#E5ECF6","aaxis":{"gridcolor":"white","linecolor":"white","ticks":""},"baxis":{"gridcolor":"white","linecolor":"white","ticks":""},"caxis":{"gridcolor":"white","linecolor":"white","ticks":""}},"coloraxis":{"colorbar":{"outlinewidth":0,"ticks":""}},"colorscale":{"sequential":[[0.0,"#0d0887"],[0.1111111111111111,"#46039f"],[0.2222222222222222,"#7201a8"],[0.3333333333333333,"#9c179e"],[0.4444444444444444,"#bd3786"],[0.5555555555555556,"#d8576b"],[0.6666666666666666,"#ed7953"],[0.7777777777777778,"#fb9f3a"],[0.8888888888888888,"#fdca26"],[1.0,"#f0f921"]],"sequentialminus":[[0.0,"#0d0887"],[0.1111111111111111,"#46039f"],[0.2222222222222222,"#7201a8"],[0.3333333333333333,"#9c179e"],[0.4444444444444444,"#bd3786"],[0.5555555555555556,"#d8576b"],[0.6666666666666666,"#ed7953"],[0.7777777777777778,"#fb9f3a"],[0.8888888888888888,"#fdca26"],[1.0,"#f0f921"]],"diverging":[[0,"#8e0152"],[0.1,"#c51b7d"],[0.2,"#de77ae"],[0.3,"#f1b6da"],[0.4,"#fde0ef"],[0.5,"#f7f7f7"],[0.6,"#e6f5d0"],[0.7,"#b8e186"],[0.8,"#7fbc41"],[0.9,"#4d9221"],[1,"#276419"]]},"xaxis":{"gridcolor":"white","linecolor":"white","ticks":"","title":{"standoff":15},"zerolinecolor":"white","automargin":true,"zerolinewidth":2},"yaxis":{"gridcolor":"white","linecolor":"white","ticks":"","title":{"standoff":15},"zerolinecolor":"white","automargin":true,"zerolinewidth":2},"scene":{"xaxis":{"backgroundcolor":"#E5ECF6","gridcolor":"white","linecolor":"white","showbackground":true,"ticks":"","zerolinecolor":"white","gridwidth":2},"yaxis":{"backgroundcolor":"#E5ECF6","gridcolor":"white","linecolor":"white","showbackground":true,"ticks":"","zerolinecolor":"white","gridwidth":2},"zaxis":{"backgroundcolor":"#E5ECF6","gridcolor":"white","linecolor":"white","showbackground":true,"ticks":"","zerolinecolor":"white","gridwidth":2}},"shapedefaults":{"line":{"color":"#2a3f5f"}},"annotationdefaults":{"arrowcolor":"#2a3f5f","arrowhead":0,"arrowwidth":1},"geo":{"bgcolor":"white","landcolor":"#E5ECF6","subunitcolor":"white","showland":true,"showlakes":true,"lakecolor":"white"},"title":{"x":0.05},"mapbox":{"style":"light"}}},"font":{"color":"#bdc3c7"},"margin":{"t":10,"b":10,"l":160,"r":10},"yaxis":{"autorange":"reversed"},"xaxis":{"title":{"text":"Total Sales (10k CNY)"},"color":"#7f8c8d","gridcolor":"#2a3a4a"},"paper_bgcolor":"rgba(0,0,0,0)","plot_bgcolor":"rgba(0,0,0,0)"}});
+Plotly.newPlot('chart7', {"data":[{"hovertemplate":"%{y}\u003cbr\u003eSales: %{x:.0f}万\u003cbr\u003eRepurchase: %{text}\u003cextra\u003e\u003c\u002fextra\u003e","marker":{"color":"#e74c3c"},"orientation":"h","text":["5.3%","8.3%","8.9%","5.9%","4.9%","7.3%","9.7%","6.1%","7.2%","9.5%","6.9%","6.7%","9.6%","5.2%","3.1%","1.0%","9.2%","6.4%","7.6%","2.3%"],"textfont":{"color":"#e8eaed"},"textposition":"outside","x":{"dtype":"f8","bdata":"pb3BF6behECUh4VaUwqAQCBB8WPMeH1A0SLb+X7sdUDDZKpgVOR1QCKOdXEbdHFA7FG4HoXzZUDtDb4wmfpfQNCzWfW5blpA63O1FfuTVED2l92ThxlTQIhjXdxGh1FAgy9MpgrGTEAK16NwPaJMQPXb14FzbkpAXdxGA3ijSUA6kst\u002fSH9FQFtCPujZ3ERAH\u002fRsVn3eQkAOLbKd789AQA=="},"y":["235纤冠军芭乐油柑汁","220简零控牛油果奶昔","245小轻甘金银花凉茶","235纤冠军羽衣甘蓝百香果西柚汁","950自律零VB羽衣甘蓝芭乐柠檬水","138轻上牛牛核桃小奶","245小轻甘竹蔗茅根水","150轻上牛牛山楂七星茶","245东方补者乌梅熬山楂","220自律零白芸豆生椰丝绒","220简零控百香果西柚奇亚籽果昔","220东方补者桑葚五黑酸奶","220简零控羽衣甘蓝青苹果奶昔","150轻上牛牛猴多C猕猴桃汁","150轻上牛牛叶黄素酯蓝莓小葡萄汁","500轻上轻颜VC1000柠檬水","950轻上凤梨白茶果汁茶","150轻上牛牛钙铁锌多莓好","950轻上苹果大红袍果汁茶","220简零控牛油果羽衣甘蓝奇亚籽果昔"],"type":"bar"}],"layout":{"template":{"data":{"histogram2dcontour":[{"type":"histogram2dcontour","colorbar":{"outlinewidth":0,"ticks":""},"colorscale":[[0.0,"#0d0887"],[0.1111111111111111,"#46039f"],[0.2222222222222222,"#7201a8"],[0.3333333333333333,"#9c179e"],[0.4444444444444444,"#bd3786"],[0.5555555555555556,"#d8576b"],[0.6666666666666666,"#ed7953"],[0.7777777777777778,"#fb9f3a"],[0.8888888888888888,"#fdca26"],[1.0,"#f0f921"]]}],"choropleth":[{"type":"choropleth","colorbar":{"outlinewidth":0,"ticks":""}}],"histogram2d":[{"type":"histogram2d","colorbar":{"outlinewidth":0,"ticks":""},"colorscale":[[0.0,"#0d0887"],[0.1111111111111111,"#46039f"],[0.2222222222222222,"#7201a8"],[0.3333333333333333,"#9c179e"],[0.4444444444444444,"#bd3786"],[0.5555555555555556,"#d8576b"],[0.6666666666666666,"#ed7953"],[0.7777777777777778,"#fb9f3a"],[0.8888888888888888,"#fdca26"],[1.0,"#f0f921"]]}],"heatmap":[{"type":"heatmap","colorbar":{"outlinewidth":0,"ticks":""},"colorscale":[[0.0,"#0d0887"],[0.1111111111111111,"#46039f"],[0.2222222222222222,"#7201a8"],[0.3333333333333333,"#9c179e"],[0.4444444444444444,"#bd3786"],[0.5555555555555556,"#d8576b"],[0.6666666666666666,"#ed7953"],[0.7777777777777778,"#fb9f3a"],[0.8888888888888888,"#fdca26"],[1.0,"#f0f921"]]}],"contourcarpet":[{"type":"contourcarpet","colorbar":{"outlinewidth":0,"ticks":""}}],"contour":[{"type":"contour","colorbar":{"outlinewidth":0,"ticks":""},"colorscale":[[0.0,"#0d0887"],[0.1111111111111111,"#46039f"],[0.2222222222222222,"#7201a8"],[0.3333333333333333,"#9c179e"],[0.4444444444444444,"#bd3786"],[0.5555555555555556,"#d8576b"],[0.6666666666666666,"#ed7953"],[0.7777777777777778,"#fb9f3a"],[0.8888888888888888,"#fdca26"],[1.0,"#f0f921"]]}],"surface":[{"type":"surface","colorbar":{"outlinewidth":0,"ticks":""},"colorscale":[[0.0,"#0d0887"],[0.1111111111111111,"#46039f"],[0.2222222222222222,"#7201a8"],[0.3333333333333333,"#9c179e"],[0.4444444444444444,"#bd3786"],[0.5555555555555556,"#d8576b"],[0.6666666666666666,"#ed7953"],[0.7777777777777778,"#fb9f3a"],[0.8888888888888888,"#fdca26"],[1.0,"#f0f921"]]}],"mesh3d":[{"type":"mesh3d","colorbar":{"outlinewidth":0,"ticks":""}}],"scatter":[{"fillpattern":{"fillmode":"overlay","size":10,"solidity":0.2},"type":"scatter"}],"parcoords":[{"type":"parcoords","line":{"colorbar":{"outlinewidth":0,"ticks":""}}}],"scatterpolargl":[{"type":"scatterpolargl","marker":{"colorbar":{"outlinewidth":0,"ticks":""}}}],"bar":[{"error_x":{"color":"#2a3f5f"},"error_y":{"color":"#2a3f5f"},"marker":{"line":{"color":"#E5ECF6","width":0.5},"pattern":{"fillmode":"overlay","size":10,"solidity":0.2}},"type":"bar"}],"scattergeo":[{"type":"scattergeo","marker":{"colorbar":{"outlinewidth":0,"ticks":""}}}],"scatterpolar":[{"type":"scatterpolar","marker":{"colorbar":{"outlinewidth":0,"ticks":""}}}],"histogram":[{"marker":{"pattern":{"fillmode":"overlay","size":10,"solidity":0.2}},"type":"histogram"}],"scattergl":[{"type":"scattergl","marker":{"colorbar":{"outlinewidth":0,"ticks":""}}}],"scatter3d":[{"type":"scatter3d","line":{"colorbar":{"outlinewidth":0,"ticks":""}},"marker":{"colorbar":{"outlinewidth":0,"ticks":""}}}],"scattermap":[{"type":"scattermap","marker":{"colorbar":{"outlinewidth":0,"ticks":""}}}],"scattermapbox":[{"type":"scattermapbox","marker":{"colorbar":{"outlinewidth":0,"ticks":""}}}],"scatterternary":[{"type":"scatterternary","marker":{"colorbar":{"outlinewidth":0,"ticks":""}}}],"scattercarpet":[{"type":"scattercarpet","marker":{"colorbar":{"outlinewidth":0,"ticks":""}}}],"carpet":[{"aaxis":{"endlinecolor":"#2a3f5f","gridcolor":"white","linecolor":"white","minorgridcolor":"white","startlinecolor":"#2a3f5f"},"baxis":{"endlinecolor":"#2a3f5f","gridcolor":"white","linecolor":"white","minorgridcolor":"white","startlinecolor":"#2a3f5f"},"type":"carpet"}],"table":[{"cells":{"fill":{"color":"#EBF0F8"},"line":{"color":"white"}},"header":{"fill":{"color":"#C8D4E3"},"line":{"color":"white"}},"type":"table"}],"barpolar":[{"marker":{"line":{"color":"#E5ECF6","width":0.5},"pattern":{"fillmode":"overlay","size":10,"solidity":0.2}},"type":"barpolar"}],"pie":[{"automargin":true,"type":"pie"}]},"layout":{"autotypenumbers":"strict","colorway":["#636efa","#EF553B","#00cc96","#ab63fa","#FFA15A","#19d3f3","#FF6692","#B6E880","#FF97FF","#FECB52"],"font":{"color":"#2a3f5f"},"hovermode":"closest","hoverlabel":{"align":"left"},"paper_bgcolor":"white","plot_bgcolor":"#E5ECF6","polar":{"bgcolor":"#E5ECF6","angularaxis":{"gridcolor":"white","linecolor":"white","ticks":""},"radialaxis":{"gridcolor":"white","linecolor":"white","ticks":""}},"ternary":{"bgcolor":"#E5ECF6","aaxis":{"gridcolor":"white","linecolor":"white","ticks":""},"baxis":{"gridcolor":"white","linecolor":"white","ticks":""},"caxis":{"gridcolor":"white","linecolor":"white","ticks":""}},"coloraxis":{"colorbar":{"outlinewidth":0,"ticks":""}},"colorscale":{"sequential":[[0.0,"#0d0887"],[0.1111111111111111,"#46039f"],[0.2222222222222222,"#7201a8"],[0.3333333333333333,"#9c179e"],[0.4444444444444444,"#bd3786"],[0.5555555555555556,"#d8576b"],[0.6666666666666666,"#ed7953"],[0.7777777777777778,"#fb9f3a"],[0.8888888888888888,"#fdca26"],[1.0,"#f0f921"]],"sequentialminus":[[0.0,"#0d0887"],[0.1111111111111111,"#46039f"],[0.2222222222222222,"#7201a8"],[0.3333333333333333,"#9c179e"],[0.4444444444444444,"#bd3786"],[0.5555555555555556,"#d8576b"],[0.6666666666666666,"#ed7953"],[0.7777777777777778,"#fb9f3a"],[0.8888888888888888,"#fdca26"],[1.0,"#f0f921"]],"diverging":[[0,"#8e0152"],[0.1,"#c51b7d"],[0.2,"#de77ae"],[0.3,"#f1b6da"],[0.4,"#fde0ef"],[0.5,"#f7f7f7"],[0.6,"#e6f5d0"],[0.7,"#b8e186"],[0.8,"#7fbc41"],[0.9,"#4d9221"],[1,"#276419"]]},"xaxis":{"gridcolor":"white","linecolor":"white","ticks":"","title":{"standoff":15},"zerolinecolor":"white","automargin":true,"zerolinewidth":2},"yaxis":{"gridcolor":"white","linecolor":"white","ticks":"","title":{"standoff":15},"zerolinecolor":"white","automargin":true,"zerolinewidth":2},"scene":{"xaxis":{"backgroundcolor":"#E5ECF6","gridcolor":"white","linecolor":"white","showbackground":true,"ticks":"","zerolinecolor":"white","gridwidth":2},"yaxis":{"backgroundcolor":"#E5ECF6","gridcolor":"white","linecolor":"white","showbackground":true,"ticks":"","zerolinecolor":"white","gridwidth":2},"zaxis":{"backgroundcolor":"#E5ECF6","gridcolor":"white","linecolor":"white","showbackground":true,"ticks":"","zerolinecolor":"white","gridwidth":2}},"shapedefaults":{"line":{"color":"#2a3f5f"}},"annotationdefaults":{"arrowcolor":"#2a3f5f","arrowhead":0,"arrowwidth":1},"geo":{"bgcolor":"white","landcolor":"#E5ECF6","subunitcolor":"white","showland":true,"showlakes":true,"lakecolor":"white"},"title":{"x":0.05},"mapbox":{"style":"light"}}},"font":{"color":"#bdc3c7"},"margin":{"t":10,"b":10,"l":160,"r":10},"yaxis":{"autorange":"reversed"},"xaxis":{"title":{"text":"Total Sales (10k CNY)"},"color":"#7f8c8d","gridcolor":"#2a3a4a"},"paper_bgcolor":"rgba(0,0,0,0)","plot_bgcolor":"rgba(0,0,0,0)"}});
 </script>
-
-<!-- ====== TAB 1: 整体分析 ====== -->
-<div id="tab-overall" class="tab-content active">
-    <div class="header">
-        <h1>📊 产品复购率分析看板</h1>
-        <p>数据来源：产品数据汇总-复购.xlsx | 2026-05-22</p>
-    </div>
-
-    <div class="metrics">
-        <div class="metric-card blue"><div class="metric-value" style="color:#2D5A8A">357</div><div class="metric-label">产品总数</div></div>
-        <div class="metric-card orange"><div class="metric-value" style="color:#F5A623">6.69%</div><div class="metric-label">全部产品均值</div></div>
-        <div class="metric-card purple"><div class="metric-value" style="color:#9B59B6">15.89%</div><div class="metric-label">有复购产品均值</div></div>
-        <div class="metric-card green"><div class="metric-value" style="color:#27AE60">17.66%</div><div class="metric-label">快手加权复购率</div></div>
-    </div>
-    <div class="metrics" style="margin-top:-8px">
-        <div class="metric-card red"><div class="metric-value" style="color:#E74C3C">0.00%</div><div class="metric-label">全部产品中位数</div></div>
-        <div class="metric-card teal"><div class="metric-value" style="color:#1ABC9C">11.28%</div><div class="metric-label">有复购产品中位数</div></div>
-        <div class="metric-card gray"><div class="metric-value" style="color:#95A5A6">42.1%</div><div class="metric-label">有复购产品占比</div></div>
-        <div class="metric-card accent"><div class="metric-value" style="color:#F5A623">206</div><div class="metric-label">零复购产品数</div></div>
-    </div>
-
-    <div class="notice-box">
-        <strong>💡 说明：</strong>由于<strong>57.9%产品复购率为0%</strong>，全部产品中位数为0。有复购的150个产品（42.1%）均值15.89%、中位数11.28%，才是真正的复购表现。
-    </div>
-
-    <div class="grid-2">
-        <div class="card">
-            <div class="card-title">📈 各渠道加权复购率对比</div>
-            <div class="chart-container"><canvas id="channelChart"></canvas></div>
-        </div>
-        <div class="card">
-            <div class="card-title">📊 复购率分布区间</div>
-            <div class="chart-container"><canvas id="distChart"></canvas></div>
-        </div>
-    </div>
-
-    <div class="grid-2">
-        <div class="card">
-            <div class="card-title">🏆 复购率TOP20产品</div>
-            <div class="table-container">
-                <table id="topTable"><thead><tr><th>#</th><th>产品名称</th><th>复购率</th><th>销售额</th></tr></thead><tbody></tbody></table>
-            </div>
-        </div>
-        <div class="card">
-            <div class="card-title">📉 复购率TOP15（条形图）</div>
-            <div class="chart-container"><canvas id="topChart"></canvas></div>
-        </div>
-    </div>
-
-    <div class="grid-3">
-        <div class="insight-card">
-            <div class="insight-header">💡 核心发现</div>
-            <div class="insight-text">63.8%产品复购率为0%，但头部产品复购率极高。西梅类、椰子水、生椰类产品复购表现突出。</div>
-        </div>
-        <div class="insight-card">
-            <div class="insight-header">📈 渠道差异</div>
-            <div class="insight-text">快手加权复购率17.66%领跑各渠道。抖音虽然体量大（9300万），但复购率仅9.72%。</div>
-        </div>
-        <div class="insight-card">
-            <div class="insight-header">⚠️ 风险警示</div>
-            <div class="insight-text">10款产品复购率为0%但销售额超15万，需重点关注这些产品的用户留存问题。</div>
-        </div>
-    </div>
-
-    <div class="card">
-        <div class="card-title">🚨 复购率为0%但销售额超15万产品（风险预警）</div>
-        <div class="table-container">
-            <table id="riskTable"><thead><tr><th>产品名称</th><th>复购率</th><th>销售额</th></tr></thead><tbody></tbody></table>
-        </div>
-    </div>
-</div>
-
-<!-- ====== TAB 2: 快手 vs 抖音 ====== -->
-<div id="tab-ksdy" class="tab-content">
-    <div class="header">
-        <h1>📱 快手 vs 抖音 复购率分析看板</h1>
-        <p>数据来源：产品数据汇总-复购.xlsx | 2026-05-22</p>
-    </div>
-
-    <div class="metrics">
-        <div class="metric-card ks"><div class="metric-value ks-color">17.09%</div><div class="metric-label">快手加权复购率</div></div>
-        <div class="metric-card dy"><div class="metric-value dy-color">9.62%</div><div class="metric-label">抖音加权复购率</div></div>
-        <div class="metric-card accent"><div class="metric-value" style="color:#F5A623">1.78x</div><div class="metric-label">快手/抖音倍数</div></div>
-        <div class="metric-card blue"><div class="metric-value" style="color:#2D5A8A">143</div><div class="metric-label">双平台产品数</div></div>
-    </div>
-
-    <div class="notice-box notice-blue">
-        <strong>📊 数据说明：</strong>快手加权复购率17.09%是抖音(9.62%)的<strong>1.78倍</strong>，但抖音体量(9400万)是快手(940万)的<strong>10倍</strong>。两平台定位不同，快手适合做私域复购，抖音适合拉新种草。
-    </div>
-
-    <div class="card">
-        <div class="card-title">📊 快手 vs 抖音 核心指标对比</div>
-        <div class="chart-container-sm"><canvas id="compareChart"></canvas></div>
-    </div>
-
-    <div class="platform-compare">
-        <div class="platform-card ks">
-            <div class="platform-header">
-                <span class="platform-badge ks-badge">快手</span>
-                <span class="platform-rate ks">17.09%</span>
-            </div>
-            <div class="table-container">
-                <table><thead><tr><th>#</th><th>产品</th><th>快手</th><th>抖音</th></tr></thead><tbody id="ksTable"></tbody></table>
-            </div>
-        </div>
-        <div class="platform-card dy">
-            <div class="platform-header">
-                <span class="platform-badge dy-badge">抖音</span>
-                <span class="platform-rate dy">9.62%</span>
-            </div>
-            <div class="table-container">
-                <table><thead><tr><th>#</th><th>产品</th><th>抖音</th><th>快手</th></tr></thead><tbody id="dyTable"></tbody></table>
-            </div>
-        </div>
-    </div>
-
-    <div class="grid-2">
-        <div class="card">
-            <div class="card-title">📈 主要产品两平台复购率对比</div>
-            <div class="chart-container"><canvas id="scatterChart"></canvas></div>
-        </div>
-        <div class="card">
-            <div class="card-title">📊 主要产品销售额对比（万元）</div>
-            <div class="chart-container"><canvas id="salesChart"></canvas></div>
-        </div>
-    </div>
-
-    <div class="grid-3">
-        <div class="insight-card">
-            <div class="insight-header">📊 平台差异</div>
-            <div class="insight-text">快手加权复购率17.09% vs 抖音9.62%。快手复购率是抖音的1.78倍。抖音体量是快手的10倍（9400万 vs 940万）。</div>
-        </div>
-        <div class="insight-card">
-            <div class="insight-header">🎯 产品差异</div>
-            <div class="insight-text">100%果汁类在两平台均表现好。西梅系列、凉茶类在快手更受欢迎。高端产品（燕窝阿胶）在抖音复购更高。</div>
-        </div>
-        <div class="insight-card">
-            <div class="insight-header">💡 策略建议</div>
-            <div class="insight-text">快手：重点运营私域，提升LTV。抖音：优化首单→复购路径。共享产品：差异化选品，避免价格内耗。</div>
-        </div>
-    </div>
-
-    <div class="card">
-        <div class="card-title">🔍 两平台复购率差异超15%的产品</div>
-        <div class="table-container">
-            <table id="diffTable"><thead><tr><th>产品</th><th>快手复购率</th><th>抖音复购率</th><th>差异</th></tr></thead><tbody></tbody></table>
-        </div>
-    </div>
-</div>
-
-<div class="footer">
-    报告生成：轻上IT工作台产品数据导出 | 数据来源：产品数据汇总-复购.xlsx | 生成时间：2026-05-22
-</div>
-
-<script>
-// ====== DATA ======
-const topProductsData = [
-    {name:"360轻上白桦树汁", rate:100.0, sales:13614},
-    {name:"245小轻甘夏桑菊凉茶", rate:100.0, sales:553},
-    {name:"150轻快活100%西梅汁", rate:72.55, sales:26720},
-    {name:"150轻上牛牛富锌山药南瓜小糊糊", rate:60.0, sales:4138},
-    {name:"150轻上轻颜燕窝阿胶燕麦奶", rate:54.65, sales:57341},
-    {name:"245轻滋畅西梅茉莉茶", rate:47.96, sales:70211},
-    {name:"245轻滋畅西梅摇摇冻", rate:45.45, sales:17569},
-    {name:"60纤冠军左旋白芸豆纤维饮西柚味", rate:43.76, sales:104409},
-    {name:"150轻快活100%橙汁", rate:40.22, sales:265697},
-    {name:"245轻滋畅西梅乌龙茶", rate:39.63, sales:279953},
-    {name:"245简零控茉莉雪芽奶茶", rate:36.84, sales:34343},
-    {name:"220轻上水果桶100%芒果汁", rate:36.81, sales:25917},
-    {name:"245轻上原味0糖生椰", rate:34.53, sales:37053},
-    {name:"一勺梨膏", rate:33.33, sales:274},
-    {name:"220轻滋畅西梅多多发酵酸奶", rate:32.57, sales:2466144},
-    {name:"60纤冠军白芸豆益生元高纤饮", rate:31.34, sales:793221},
-    {name:"1L轻上白桦树汁", rate:29.88, sales:65089},
-    {name:"180轻滋畅西梅汁", rate:29.29, sales:241970},
-    {name:"1L轻上原味0糖生椰", rate:28.72, sales:330437},
-    {name:"150轻快活100%苹果汁", rate:28.43, sales:78617}
-];
-const zeroRepurchaseData = [
-    ["250轻上椰子水", 436258], ["950轻上粉芭乐茉莉果汁茶", 431492],
-    ["950轻上石榴云雾绿茶果汁茶", 418789], ["360轻上椰子水", 418426],
-    ["950轻上凤梨白茶果汁茶", 371504], ["230简零控牛油果奶昔", 263475],
-    ["230轻上原味0糖生椰", 258096], ["230轻上叶黄素酯蓝莓酸奶", 223914],
-    ["405东方补者苹果黄芪水", 201636], ["65轻滋畅西梅饮", 154787]
-];
-const ksTop10 = [
-    ["245小轻甘夏桑菊凉茶", 100.0, null], ["1L轻上100%苹果汁", 75.0, 18.3],
-    ["245简零控茉莉雪芽奶茶", 71.4, 16.7], ["245轻上百合玉竹雪梨饮", 66.7, 11.4],
-    ["245轻滋畅西梅柠檬茶", 61.1, 24.6], ["180轻滋畅西梅汁", 55.6, 29.1],
-    ["150轻快活100%苹果汁", 50.0, 28.2], ["138轻滋畅羽衣甘蓝乳酸菌", 50.0, 16.6],
-    ["1L轻上100%芒果汁", 35.7, 18.1], ["220轻上水果桶100%苹果汁", 35.6, 17.5]
-];
-const dyTop10 = [
-    ["360轻上白桦树汁", 100.0, 0.0], ["150轻快活100%西梅汁", 72.5, 0.0],
-    ["150轻上牛牛富锌山药南瓜小糊糊", 60.0, null], ["150轻上轻颜燕窝阿胶燕麦奶", 54.8, 0.0],
-    ["245轻滋畅西梅茉莉茶", 48.0, null], ["60纤冠军左旋白芸豆纤维饮西柚味", 47.1, 13.8],
-    ["245轻滋畅西梅摇摇冻", 45.5, null], ["150轻快活100%橙汁", 40.7, 13.8],
-    ["245轻滋畅西梅乌龙茶", 39.6, 25.0], ["245轻上原味0糖生椰", 38.5, 0.0]
-];
-const diffProductsData = [
-    ["1L轻上100%苹果汁", 75.0, 18.3], ["245轻上百合玉竹雪梨饮", 66.7, 11.4],
-    ["245简零控茉莉雪芽奶茶", 71.4, 16.7], ["360轻上白桦树汁", 100.0, 0.0],
-    ["150轻快活100%西梅汁", 72.5, 0.0], ["150轻上轻颜燕窝阿胶燕麦奶", 54.8, 0.0],
-    ["245轻上原味0糖生椰", 38.5, 0.0], ["220轻上水果桶100%芒果汁", 37.7, 0.0]
-];
-
-// ====== TAB 1 CHARTS ======
-new Chart(document.getElementById('channelChart'), {
-    type: 'bar',
-    data: {
-        labels: ['快手', '抖音', '小红书', '视频号', '京东商城', '拼多多', '淘宝天猫', '微盟微商城', 'Tiktok', '其他平台'],
-        datasets: [{ label: '加权复购率 (%)', data: [17.66, 9.72, 0, 0, 0, 0, 0, 0, 0, 0], backgroundColor: [17.66, 9.72, 0, 0, 0, 0, 0, 0, 0, 0].map(r => r > 15 ? '#27AE60' : r > 5 ? '#F5A623' : '#E74C3C'), borderRadius: 6 }]
-    },
-    options: { indexAxis: 'y', responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { x: { beginAtZero: true, max: 25 } } }
-});
-
-new Chart(document.getElementById('distChart'), {
-    type: 'doughnut',
-    data: { labels: ['0-5%', '5-10%', '10-15%', '15-20%', '20-100%'], datasets: [{ data: [227, 41, 32, 21, 33], backgroundColor: ['#E74C3C', '#F5A623', '#4A90D9', '#1ABC9C', '#27AE60'], borderWidth: 2, borderColor: '#fff' }] },
-    options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'right' } } }
-});
-
-const top15 = topProductsData.slice(0, 15);
-new Chart(document.getElementById('topChart'), {
-    type: 'bar',
-    data: { labels: top15.map(p => p.name.length > 10 ? p.name.slice(0, 10) + '...' : p.name), datasets: [{ label: '复购率 (%)', data: top15.map(p => p.rate), backgroundColor: '#2D5A8A', borderRadius: 4 }] },
-    options: { indexAxis: 'y', responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { x: { beginAtZero: true, max: 110 } } }
-});
-
-// TOP Table
-const topTableBody = document.querySelector('#topTable tbody');
-topProductsData.forEach((p, i) => {
-    const rateClass = p.rate > 30 ? 'rate-high' : p.rate > 10 ? 'rate-mid' : 'rate-low';
-    const salesStr = p.sales >= 1000000 ? (p.sales/1000000).toFixed(1) + 'M' : p.sales >= 1000 ? (p.sales/1000).toFixed(0) + 'K' : p.sales.toString();
-    topTableBody.innerHTML += `<tr><td>${i+1}</td><td>${p.name}</td><td class="${rateClass}">${p.rate.toFixed(2)}%</td><td>${salesStr}</td></tr>`;
-});
-
-// Risk Table
-const riskTableBody = document.querySelector('#riskTable tbody');
-zeroRepurchaseData.forEach(p => {
-    const salesStr = p[1] >= 1000 ? (p[1]/1000).toFixed(0) + 'K' : p[1].toString();
-    riskTableBody.innerHTML += `<tr><td>${p[0]}</td><td class="rate-low">0.00%</td><td>${salesStr}</td></tr>`;
-});
-
-// ====== TAB 2 CHARTS ======
-new Chart(document.getElementById('compareChart'), {
-    type: 'bar',
-    data: { labels: ['加权复购率', '平均复购率', '中位数复购率'], datasets: [{ label: '快手', data: [17.09, 12.04, 7.17], backgroundColor: '#FF6B35', borderRadius: 6 }, { label: '抖音', data: [9.62, 11.30, 8.26], backgroundColor: '#1DA8B8', borderRadius: 6 }] },
-    options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'top' } }, scales: { y: { beginAtZero: true, max: 22 } } }
-});
-
-// KS Table
-const ksTableBody = document.getElementById('ksTable');
-ksTop10.forEach((p, i) => {
-    const dyRate = p[2] !== null ? p[2].toFixed(1) + '%' : 'N/A';
-    ksTableBody.innerHTML += `<tr><td>${i+1}</td><td>${p[0].length > 15 ? p[0].slice(0,15)+'...' : p[0]}</td><td class="ks-color">${p[1].toFixed(1)}%</td><td>${dyRate}</td></tr>`;
-});
-
-// DY Table
-const dyTableBody = document.getElementById('dyTable');
-dyTop10.forEach((p, i) => {
-    const ksRate = p[2] !== null ? p[2].toFixed(1) + '%' : 'N/A';
-    dyTableBody.innerHTML += `<tr><td>${i+1}</td><td>${p[0].length > 15 ? p[0].slice(0,15)+'...' : p[0]}</td><td class="dy-color">${p[1].toFixed(1)}%</td><td>${ksRate}</td></tr>`;
-});
-
-const scatterLabels = ['四神汤','VC柠檬水','椰子水','人参枸杞汁','芭乐油柑','金银花凉茶','西梅奇亚籽','蓝莓小奶','高钙椰','西梅乳酸菌'];
-new Chart(document.getElementById('scatterChart'), {
-    type: 'bar',
-    data: { labels: scatterLabels, datasets: [{ label: '快手', data: [24.8,5.1,24.0,22.0,5.3,15.9,11.7,9.9,8.8,24.1], backgroundColor: '#FF6B35', borderRadius: 4 }, { label: '抖音', data: [10.1,1.9,15.3,7.0,4.0,7.5,13.9,7.2,9.0,14.8], backgroundColor: '#1DA8B8', borderRadius: 4 }] },
-    options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'top' } }, scales: { y: { beginAtZero: true } } }
-});
-
-new Chart(document.getElementById('salesChart'), {
-    type: 'bar',
-    data: { labels: scatterLabels, datasets: [{ label: '快手(万)', data: [258,62,32,85,0.9,57,7,10,18,10], backgroundColor: '#FF6B35', borderRadius: 4 }, { label: '抖音(万)', data: [1915,1187,438,437,458,282,293,331,344,302], backgroundColor: '#1DA8B8', borderRadius: 4 }] },
-    options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'top' } }, scales: { y: { beginAtZero: true } } }
-});
-
-// Diff Table
-const diffTableBody = document.querySelector('#diffTable tbody');
-diffProductsData.forEach(p => {
-    const isKsBetter = p[1] > p[2];
-    diffTableBody.innerHTML += `<tr><td>${p[0]}</td><td class="${isKsBetter ? 'ks-color' : 'dy-color'}">${p[1].toFixed(1)}%</td><td>${p[2].toFixed(1)}%</td><td>${isKsBetter ? '快手高' : '抖音高'}${Math.abs(p[1]-p[2]).toFixed(1)}%</td></tr>`;
-});
-</script>
-
 </body>
 </html>
